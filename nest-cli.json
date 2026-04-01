@@ -1,14 +1,15 @@
 {
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
+  "monorepo": true,
+  "root": "apps/nestar-api",
   "sourceRoot": "apps/nestar-api/src",
+  "defaultProject": "nestar-api",
   "compilerOptions": {
     "deleteOutDir": true,
     "webpack": true,
     "tsConfigPath": "apps/nestar-api/tsconfig.app.json"
   },
-  "monorepo": true,
-  "root": "apps/nestar-api",
   "projects": {
     "nestar-api": {
       "type": "application",
