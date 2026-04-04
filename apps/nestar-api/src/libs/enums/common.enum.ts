@@ -21,4 +21,10 @@ export enum Message {
 	SELF_SUBSCRIPTION_DENIED = 'Self subscription is denied!',
 }
 
-
+export enum Direction {
+	ASC = 1, // pastdan yuqoriga
+	DESC = -1, // yuqoridan pastga
+}
+registerEnumType(Direction, {
+	name: 'Direction',
+});
