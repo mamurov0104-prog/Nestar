@@ -2,27 +2,26 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule } from '@nestjs/config';
- import {GraphQLModule} from '@nestjs/graphql'
- import { ApolloDriver } from '@nestjs/apollo';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver } from '@nestjs/apollo';
 import { AppResolver } from './app.resolver';
 import { ComponentsModule } from './components/components.module';
 import { DatabaseModule } from './database/database.module';
+import { registerAllEnums } from './libs/enums/register-enums';
 
 @Module({
-  imports: [
+	imports: [
 		ConfigModule.forRoot(),
-GraphQLModule.forRoot({
+		GraphQLModule.forRoot({
 			driver: ApolloDriver,
-			playground: true,
+			playground: true, // root/graphql => playground
 			uploads: false,
 			autoSchemaFile: true,
-		
 		}),
-ComponentsModule,
-DatabaseModule,
-  
-  ],
-	controllers: [AppController], // bu server Rest Api sifatiada run bo'lyapti
-	providers: [AppService, AppResolver], // graphQL sifatida ham run bo'lyapti
+		ComponentsModule,
+		DatabaseModule,
+	],
+	controllers: [AppController],
+	providers: [AppService, AppResolver],
 })
 export class AppModule {}

@@ -1,51 +1,46 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import { Mutation, Resolver, Query, Args, InputType } from '@nestjs/graphql';
 import { MemberService } from './member.service';
-import { UseGuards } from '@nestjs/common';
-import { ObjectId } from 'mongoose';
-
-
+import { InternalServerErrorException, UsePipes, ValidationPipe } from '@nestjs/common';
+import { LoginInput, MemberInput } from '../../libs/dto/member/member.input';
+import { Member } from '../../libs/dto/member/member';
 
 @Resolver()
 export class MemberResolver {
+
 	constructor(private readonly memberService: MemberService) {}
 
 	@Mutation(() => Member)
-	public async signup(
-		@Args('input') input: MemberInput
-	): Promise<Member> {
-		console.log('Mutation: singup');
-		return await this.memberService.signup(input);
+	@UsePipes(ValidationPipe) 
+	public async signup(@Args('input') input: MemberInput): Promise<Member> {
+		try {
+			console.log('Mutation : signup');
+			console.log('MemberInput :', input);
+			return this.memberService.signup(input);
+		} catch (error) {
+			console.log('Error, signup:', error);
+			throw new InternalServerErrorException(error); 
+		}
 	}
-
 	@Mutation(() => Member)
-	public async login(
-		@Args('input') input: LoginInput
-	): Promise<Member> {
-		console.log('Mutation: login');
-		return await this.memberService.login(input);
+	@UsePipes(ValidationPipe)
+	public async login(@Args('input') input: LoginInput): Promise<Member> {
+		try {
+			console.log('Mutation : login');
+			return this.memberService.login(input);
+		} catch (error) {
+			console.log('Error, login:', error);
+			throw new InternalServerErrorException(error); // 500
+		}
+	}
+	@Mutation(() => String)
+	public async updateMember(): Promise<String> {
+		console.log('Mutation : updateMember');
+		return this.memberService.updateMember();
 	}
 
-	
-	@Mutation(() => Member)
-	public async updateMember(
-		@Args('input') input: MemberUpdate,
-		@AuthMember('_id') memberId: ObjectId,
-	): Promise<Member> {
-		console.log('Mutation updateMember');
-		delete input._id;
-		return await this.memberService.updateMember(memberId, input);
-	}
-
-	@UseGuards(WithoutGuard)
-	@Query(() => Member)
-	public async getMember(
-		@Args('memberId') input: string, 
-		@AuthMember('_id') memberId: ObjectId
-	): Promise<Member> {
-		console.log('Query: getMember');
-		const targetId = shapeIntoMongoObjectId(input);
-		return await this.memberService.getMember(memberId, targetId);
-	}
-
-
+	@Query(() => String)
+	public async getMember(): Promise<String> {
+		console.log('Query : getMember');
+		return this.memberService.getMember();
+	} 
 }
