@@ -1,46 +1,38 @@
-import { Mutation, Resolver, Query, Args, InputType } from '@nestjs/graphql';
+import { Mutation, Resolver, Query, Args } from '@nestjs/graphql';
 import { MemberService } from './member.service';
-import { InternalServerErrorException, UsePipes, ValidationPipe } from '@nestjs/common';
+import { InternalServerErrorException, UsePipes } from '@nestjs/common';
 import { LoginInput, MemberInput } from '../../libs/dto/member/member.input';
 import { Member } from '../../libs/dto/member/member';
 
 @Resolver()
 export class MemberResolver {
-
 	constructor(private readonly memberService: MemberService) {}
+	//Querty Rest Api'dagi => GET
+	//Mutation Rest Api'dagi => POST
 
 	@Mutation(() => Member)
-	@UsePipes(ValidationPipe) 
 	public async signup(@Args('input') input: MemberInput): Promise<Member> {
-		try {
-			console.log('Mutation : signup');
-			console.log('MemberInput :', input);
-			return this.memberService.signup(input);
-		} catch (error) {
-			console.log('Error, signup:', error);
-			throw new InternalServerErrorException(error); 
-		}
+		//Args = Arguments //NestJS requestdan input ni olib, seni functioning ichidagi input o‘zgaruvchisiga joylayapti.
+		console.log('Mutation signup');
+		console.log('input', input);
+		const result = await this.memberService.signup(input);
+		return result;
 	}
+
 	@Mutation(() => Member)
-	@UsePipes(ValidationPipe)
 	public async login(@Args('input') input: LoginInput): Promise<Member> {
-		try {
-			console.log('Mutation : login');
-			return this.memberService.login(input);
-		} catch (error) {
-			console.log('Error, login:', error);
-			throw new InternalServerErrorException(error); // 500
-		}
+		console.log('Mutation login');
+		return this.memberService.login(input);
 	}
+
 	@Mutation(() => String)
-	public async updateMember(): Promise<String> {
-		console.log('Mutation : updateMember');
+	public async updateMember(): Promise<string> {
+		console.log('Mutation updateMember');
 		return this.memberService.updateMember();
 	}
-
 	@Query(() => String)
-	public async getMember(): Promise<String> {
-		console.log('Query : getMember');
+	public async getMember(): Promise<string> {
+		console.log('Mutation getMember');
 		return this.memberService.getMember();
-	} 
+	}
 }

@@ -9,51 +9,43 @@ import { Message } from '../../libs/enums/common.enum';
 @Injectable()
 export class MemberService {
 	constructor(@InjectModel('Member') private readonly memberModel: Model<Member>) {}
+
 	public async signup(input: MemberInput): Promise<Member> {
-		// TODO: Hashshing password
+		//TODO: Hash password
+
 		try {
 			const result = await this.memberModel.create(input);
+			//TODO: Authentication via TOKEN
 			return result;
-		} catch (error) {
-			console.log('Error, Service.model: ', error);
-			throw new BadRequestException(error);
+		} catch (err) {
+			console.log('Error, Service.model', err.message); //? Mongodb error message?
+			throw new BadRequestException(Message.USED_MEMBER_NICK_OR_PHONE);
 		}
 	}
 
 	public async login(input: LoginInput): Promise<Member> {
-		try {
-			const { memberNick, memberPassword } = input;
-			// exist check
-			const response: Member = (await this.memberModel
-				.findOne({ memberNick: memberNick })
-				.select('+memberPassword')
-				.exec()) as Member;
-			console.log('Member:', response);
-
-			if (!response || response.memberStatus === MemberStatus.DELETE) {
-				throw new InternalServerErrorException(Message.NO_MEMBER_NICK);
-			} else if (response.memberStatus === MemberStatus.BLOCK) {
-				throw new InternalServerErrorException(Message.BLOCKED_USER);
-			}
-
-			// todo:  Password compare logic
-			const isMatch = memberPassword === response.memberPassword;
-			if (!isMatch) {
-				throw new InternalServerErrorException(Message.WRONG_PASSWORD);
-			}
-
-			return response;
-		} catch (error) {
-			console.log('Error, Service.model: ', error);
-			throw new BadRequestException(error);
+		const { memberNick, memberPassword } = input;
+		const response: Member | null = await this.memberModel
+			.findOne({ memberNick: memberNick })
+			.select('+memberPassword')
+			.exec();
+		if (!response || response.memberStatus === MemberStatus.DELETE) {
+			throw new InternalServerErrorException(Message.NO_MEMBER_NICK);
+		} else if (response.memberStatus === MemberStatus.BLOCK) {
+			throw new InternalServerErrorException(Message.BLOCKED_USER);
 		}
+		//TODO : Compare passwords
+		const isMatch = memberPassword === response.memberPassword;
+		if (!isMatch) throw new InternalServerErrorException(Message.WRONG_PASSWORD);
+
+		return response;
 	}
 
-	public async updateMember(): Promise<String> {
+	public async updateMember(): Promise<string> {
 		return 'updateMember executed';
 	}
 
-	public async getMember(): Promise<String> {
+	public async getMember(): Promise<string> {
 		return 'getMember executed';
 	}
 }
