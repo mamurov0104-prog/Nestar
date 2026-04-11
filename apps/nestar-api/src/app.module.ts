@@ -10,12 +10,10 @@ import { DatabaseModule } from './database/database.module';
 import { T } from './libs/types/common';
 
 @Module({
-	//shu class ichida loyiha qismlarini ro‘yxatdan o‘tkazaman
 	imports: [
-		ConfigModule.forRoot(), // nestar-api server da .env ni o'qishga imkon yaratadi //forRoot()=>Modulni boshlang‘ich sozlama bilan ishga tushir
+		ConfigModule.forRoot(),
 		GraphQLModule.forRoot({
-			//Bu GraphQL modulini NestJS ichiga ulayapti.
-			driver: ApolloDriver, //Bu yerda GraphQL qaysi engine/driver bilan ishlashini aytyapti.
+			driver: ApolloDriver,
 			playground: true, //test qiladigan maxsus sahifa.
 			uploads: false,
 			autoSchemaFile: true, //“Schema faylni NestJS o‘zi avtomatik generatsiya qilsin”

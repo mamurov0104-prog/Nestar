@@ -4,13 +4,13 @@ import { MemberAuthType, MemberType } from '../../enums/member.enum';
 
 @InputType()
 export class MemberInput {
-	@IsNotEmpty() 
-	@Length(3, 12)
-	@Field(() => String)
-	memberNick: string; 
-
 	@IsNotEmpty()
 	@Length(3, 12)
+	@Field(() => String)
+	memberNick: string;
+
+	@IsNotEmpty()
+	@Length(5, 12)
 	@Field(() => String)
 	memberPassword: string;
 
@@ -19,12 +19,12 @@ export class MemberInput {
 	memberPhone: string;
 
 	@IsOptional()
-	@Field(() => MemberType, { nullable: true }) 
-	memberType?: MemberType;
+	@Field(() => MemberAuthType, { nullable: true }) //bo'sh bo'lishi mumkin
+	memberAuthType?: MemberAuthType;
 
 	@IsOptional()
-	@Field(() => MemberAuthType, { nullable: true })
-	memberAuthType?: MemberAuthType;
+	@Field(() => MemberType, { nullable: true }) //bo'sh bo'lishi mumkin
+	memberType?: MemberType;
 }
 
 @InputType()
@@ -35,7 +35,7 @@ export class LoginInput {
 	memberNick: string;
 
 	@IsNotEmpty()
-	@Length(3, 12)
+	@Length(5, 12)
 	@Field(() => String)
 	memberPassword: string;
 }
