@@ -1,27 +1,27 @@
 {
-	"name": "nestars",
-	"version": "0.0.1",
-	"description": "",
-	"author": "",
-	"private": true,
-	"license": "ITC",
-	"scripts": {
-		"build": "nest build",
-		"format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
-		"start": "nest start",
-		"start:dev": "nest start --watch",
-		"start:dev:batch": "nest start nestar-batch --watch",
-		"start:debug": "nest start --debug --watch",
-		"start:prod": "NODE_ENV=production node dist/apps/nestar-api/main",
-		"start:prod:batch": "node dist/apps/nestars-batch/main",
-		"lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-		"test": "jest",
-		"test:watch": "jest --watch",
-		"test:cov": "jest --coverage",
-		"test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-		"test:e2e": "jest --config ./apps/nestars-api/test/jest-e2e.json"
-	},
-	"dependencies": {
+  "name": "nestar",
+  "version": "0.0.1",
+  "description": "",
+  "author": "",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "nest build",
+    "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:dev:batch": "nest start nestar-batch --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "NODE_ENV=production node dist/apps/nestar-api/main",
+    "start:prod:batch": "node dist/apps/nestar-batch/main",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:cov": "jest --coverage",
+    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+    "test:e2e": "jest --config ./apps/nestar-api/test/jest-e2e.json"
+  },
+ "dependencies": {
 		"@apollo/server": "^4.9.5",
 		"@nestjs/apollo": "^12.0.10",
 		"@nestjs/axios": "^3.0.1",
@@ -71,24 +71,24 @@
 		"tsconfig-paths": "^4.2.0",
 		"typescript": "^5.1.3"
 	},
-	"jest": {
-		"moduleFileExtensions": [
-			"js",
-			"json",
-			"ts"
-		],
-		"rootDir": ".",
-		"testRegex": ".*\\.spec\\.ts$",
-		"transform": {
-			"^.+\\.(t|j)s$": "ts-jest"
-		},
-		"collectCoverageFrom": [
-			"**/*.(t|j)s"
-		],
-		"coverageDirectory": "./coverage",
-		"testEnvironment": "node",
-		"roots": [
-			"<rootDir>/apps/"
-		]
-	}
+  "jest": {
+    "moduleFileExtensions": [
+      "js",
+      "json",
+      "ts"
+    ],
+    "rootDir": ".",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "collectCoverageFrom": [
+      "**/*.(t|j)s"
+    ],
+    "coverageDirectory": "./coverage",
+    "testEnvironment": "node",
+    "roots": [
+      "<rootDir>/apps/"
+    ]
+  }
 }
