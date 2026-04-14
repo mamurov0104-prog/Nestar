@@ -25,8 +25,9 @@ export class WithoutGuard implements CanActivate {
 			console.log('memberNick[without] =>', request.body.authMember?.memberNick ?? 'none');
 			return true;
 		}
-		return false;
 
 		// description => http, rpc, gprs and etc are ignored
 	}
 }
+// bu mantiqning vazifasfi, agar token mavjud bo'lsa, uni tekshirish va authMember ni request body ga qo'yish, agar token bo'lmasa yoki noto'g'ri bo'lsa, authMember ni null qilish. 
+// Bu guard, autentifikatsiya talab qilinmaydigan, lekin mavjud bo'lsa foydalanuvchi ma'lumotlarini olish mumkin bo'lgan route lar uchun ishlatiladi.

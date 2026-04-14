@@ -1,56 +1,53 @@
 import { Field, InputType } from '@nestjs/graphql';
 import { IsNotEmpty, IsOptional, Length } from 'class-validator';
-import { MemberAuthType, MemberStatus, MemberType } from '../../enums/member.enum';
-import { Types } from 'mongoose';
+import { MemberStatus, MemberType } from '../../enums/member.enum';
+import type { ObjectId } from 'mongoose';
 
-// Biz bu DTO ni updateMemberByAdmin, updateMember da ishaltiladi 
 @InputType()
 export class MemberUpdate {
-	// validations decoratordan tegishlilarini chaqiramiz
-	@IsNotEmpty()
-	@Field(() => String)
-	_id!: Types.ObjectId; // 
+  @IsNotEmpty()
+  @Field(() => String)
+  _id: ObjectId;
 
-	@IsOptional()
-	@Field(() => MemberType, { nullable: true }) // null 가능
-	memberType?: MemberType;
+  @IsOptional()
+  @Field(() => MemberType, { nullable: true })
+  memberType?: MemberType;
 
-	@IsOptional()
-	@Field(() => MemberStatus, { nullable: true })
-	memberStatus?: MemberStatus;
+  @IsOptional()
+  @Field(() => MemberStatus, { nullable: true })
+  memberStatus?: MemberStatus;
 
-	@IsOptional()
-	@Field(() => String, { nullable: true })
-	memberPhone?: string;
+  @IsOptional()
+  @Field(() => String, { nullable: true })
+  memberPhone?: string;
 
-	@IsOptional()
-	@Length(3, 12)
-	@Field(() => String, { nullable: true })
-	memberNick?: string;
+  @IsOptional()
+  @Length(3, 12)
+  @Field(() => String, { nullable: true })
+  memberNick?: string;
 
-	@IsOptional()
-	@Length(3, 12)
-	@Field(() => String, { nullable: true })
-	memberPassword?: string;
+  @IsOptional()
+  @Length(5, 12)
+  @Field(() => String, { nullable: true })
+  memberPassword?: string;
 
-	@IsOptional()
-	@Length(3, 100)
-	@Field(() => String, { nullable: true })
-	memberFullName?: string;
+  @IsOptional()
+  @Length(3, 100)
+  @Field(() => String, { nullable: true })
+  memberFullName?: string;
 
-	@IsOptional()
-	@Field(() => String, { nullable: true })
-    memberImage?: string;
-    
-    @IsOptional()   
-	@Field(() => String, { nullable: true })
-    memberAddress?: string;
+  @IsOptional()
+  @Field(() => String, { nullable: true })
+  memberImage?: string;
 
-    @IsOptional()   
-    @Field(() => String, { nullable: true })
-    memberDesc?: string;
+  @IsOptional()
+  @Field(() => String, { nullable: true })
+  memberAddress?: string;
 
-    deletedAt?: Date; // User o'zini delete qilganda 
+  @IsOptional()
+  @Field(() => String, { nullable: true })
+  memberDesc?: string;
+
+  @IsOptional()
+  deleteAt?: Date;
 }
-
-
