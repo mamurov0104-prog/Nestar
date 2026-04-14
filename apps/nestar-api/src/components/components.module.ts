@@ -9,15 +9,15 @@ import { FollowModule } from './follow/follow.module';
 import { BoardArticleModule } from './board-article/board-article.module';
 
 @Module({
-  imports: [
-    MemberModule,
-     PropertyModule,
-      AuthModule, 
-      CommentModule,
-       LikeModule,
-        ViewModule, 
-        FollowModule,
-         BoardArticleModule,
-        ],
+	imports: [
+		MemberModule,
+		AuthModule,
+		PropertyModule,
+		BoardArticleModule,		
+		LikeModule,
+		ViewModule,
+		FollowModule,
+		CommentModule,
+	],
 })
 export class ComponentsModule {}
