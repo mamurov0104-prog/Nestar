@@ -4,6 +4,7 @@ export enum MemberType {
   USER = 'USER',
   AGENT = 'AGENT',
   ADMIN = 'ADMIN',
+  ACTIVE = "ACTIVE",
 }
 
 registerEnumType(MemberType, {

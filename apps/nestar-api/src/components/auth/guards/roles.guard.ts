@@ -33,8 +33,8 @@ export class RolesGuard implements CanActivate {
 			return true;
 		}
 
+		return true;
+
 		// description => http, rpc, gprs and etc are ignored
 	}
 }
-//Bu mantiqning vazifasi, route handler ga @Roles() dekoratori orqali berilgan rollarni tekshirish va agar foydalanuvchi tokeni mavjud bo'lsa, uni tekshirish va authMember ni request body ga qo'yish. 
-// Agar token bo'lmasa yoki foydalanuvchi kerakli rollardan biriga ega bo'lmasa, xatolik tashlanadi.

@@ -1,36 +1,42 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common'; // NestJS interceptor va logging uchun kerak
-import { GqlContextType, GqlExecutionContext } from '@nestjs/graphql'; // GraphQL request context bilan ishlash
-import { Observable } from 'rxjs'; // asinxron oqimlarni boshqarish uchun
-import { tap } from 'rxjs/operators'; // response qaytishidan oldin side effect (log) qilish uchun
+import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } from "@nestjs/common";
+import { GqlContextType, GqlExecutionContext } from "@nestjs/graphql";
+import { tap } from "rxjs";
+import { Observable } from "rxjs/internal/Observable";
 
-@Injectable() // class ni NestJS DI container ga service sifatida ro‘yxatdan o‘tkazadi
+
+
+@Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  private readonly logger: Logger = new Logger(); // NestJS built-in logger
+	private readonly logger: Logger = new Logger();
 
-  public intercept(context: ExecutionContext, next: CallHandler): Observable<any> { // interceptor vazifasi, request va response ni ushlab turadi
-    const recordTime = Date.now(); // request boshlangan vaqt
-    const requestType = context.getType<GqlContextType>(); // request turi: http yoki graphql
+	public intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+		const recordTime = Date.now();
+		const requestType = context.getType<GqlContextType>();
 
-    if (requestType === 'http') {
-      /* Develop if needed! */ // keyinchalik REST API uchun ishlatish mumkin
-      return next.handle();
-    } else if (requestType === 'graphql') {
-      /* (1) Print Request */
-      const gqlContext = GqlExecutionContext.create(context); // GraphQL context yaratish
-      this.logger.log(`${this.stringify(gqlContext.getContext().req.body)}`, 'REQUEST'); // request body ni log qiladi
+            /* Develop if needed! */
+            /* Zarur bo‘lsa shu qism keyin to‘ldiriladi! */
+			return next.handle().pipe();
+		if (requestType === 'graphql') {
+            /* (1) Print Request */
+            /* (1) So‘rovni chiqarish */
+			const gqlContext = GqlExecutionContext.create(context);
+			this.logger.log(`${this.stringify(gqlContext.getContext().req.body)}`, 'REQUEST');
+		}
+        
+        /* (2) Errors handling via Graph QL */
+        /* (2) GraphQL orqali xatolarni boshqarish */
 
-      /* (2) Errors handing via GraphQL */
-      /* (3) No Errors, giving Response below */
-      return next.handle().pipe( // request ni keyingi layer ga yuboradi
-        tap((context) => { // response qaytishidan oldin ishlaydi
-          const responseTime = Date.now() - recordTime; // qancha vaqt ketganini hisoblaydi
-          this.logger.log(`${this.stringify(context)} - ${responseTime}ms \n\n`, 'RESPONSE'); // response + time log
-        }),
-      );
-    }
-  }
+			/* (3) No Errors, giving response below */
+            /* (3) Xato bo‘lmasa, pastda javob qaytariladi */
+		return next.handle().pipe(
+			tap((data) => {
+				const responseTime = Date.now() - recordTime;
+				this.logger.log(`${this.stringify(data)} - ${responseTime}ms \n\n`, 'RESPONSE');
+			}),
+		);
+	}
 
-  private stringify(context: ExecutionContext): string { // object ni string ko‘rinishga o‘tkazadi
-    return JSON.stringify(context).slice(0, 75); // log juda uzun bo‘lmasligi uchun 75 ta belgigacha
-  }
+	private stringify(data: any): string {
+		return JSON.stringify(data).slice(0, 75);
+	}
 }

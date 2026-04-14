@@ -20,12 +20,13 @@ export class AuthGuard implements CanActivate {
 			if (!authMember) throw new UnauthorizedException(Message.NOT_AUTHENTICATED);
 
 			console.log('memberNick[auth] =>', authMember.memberNick);
-			request.body.authMember = authMember; //bu authMember ni request body ga qo'yadi, shunda resolverlarda @AuthMember() dekoratori orqali authMember ni olish mumkin bo'ladi
+			request.body.authMember = authMember;
 
 			return true;
 		}
 
+		return true;
+
 		// description => http, rpc, gprs and etc are ignored
 	}
 }
-//Bu mantiqning vazifasi, agar token mavjud bo'lsa, uni tekshirish va authMember ni request body ga qo'yish, agar token bo'lmasa yoki noto'g'ri bo'lsa, xatolik tashlash.
