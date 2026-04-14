@@ -7,29 +7,31 @@ import { ApolloDriver } from '@nestjs/apollo';
 import { AppResolver } from './app.resolver';
 import { ComponentsModule } from './components/components.module';
 import { DatabaseModule } from './database/database.module';
+import { registerAllEnums } from './libs/enums/register-enums';
 import { T } from './libs/types/common';
 
+// registerAllEnums(); // bir mantiq bilan reg qilish
 @Module({
 	imports: [
-		ConfigModule.forRoot(),
+    ConfigModule.forRoot(), // .env faylni o'qib beradi. Bu mantiq doim birinchi keladi
 		GraphQLModule.forRoot({
 			driver: ApolloDriver,
-			playground: true, //test qiladigan maxsus sahifa.
+			playground: true, // root/graphql => playground
 			uploads: false,
-			autoSchemaFile: true, //“Schema faylni NestJS o‘zi avtomatik generatsiya qilsin”
+			autoSchemaFile: true,
 			formatError: (error: T) => {
 				const graphQLFormattedError = {
 					code: error?.extensions.code,
 					message:
-						error?.extensions?.exception?.response?.message || error?.extensions?.response?.message || error?.message,
+						error?.extensions?.exception?.response?.message || error.extensions?.response?.message || error?.message,
 				};
-				console.log('GRAPHQL GLOBAL ERR:', graphQLFormattedError);
+				console.log('GRAPHQL GLOBAL ERROR:', graphQLFormattedError);
 				return graphQLFormattedError;
 			},
 		}),
-		ComponentsModule, //HTTP
-		DatabaseModule, //TCP
-	],
+		ComponentsModule, // bizning barcha componentlarni o'z ichiga olgan modul
+		DatabaseModule, // DB bilan bog'lanish uchun modul
+ 	],
 	controllers: [AppController],
 	providers: [AppService, AppResolver],
 })

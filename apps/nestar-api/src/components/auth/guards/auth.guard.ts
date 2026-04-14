@@ -15,18 +15,19 @@ export class AuthGuard implements CanActivate {
 			const bearerToken = request.headers.authorization;
 			if (!bearerToken) throw new BadRequestException(Message.TOKEN_NOT_EXIST);
 
+			console.log('bearerToken:', bearerToken);
+
 			const token = bearerToken.split(' ')[1],
 				authMember = await this.authService.verifyToken(token);
 			if (!authMember) throw new UnauthorizedException(Message.NOT_AUTHENTICATED);
-			// console.log("authmember", authMember);
 
-			console.log('memberNick[auth] =>', authMember.memberNick);
+			console.log('memberNick[auth] =>', authMember.memberNick, authMember.memberType);
 			request.body.authMember = authMember;
 
-			return true 
+			return true;
 		}
-return false;
 
 		// description => http, rpc, gprs and etc are ignored
+		return false;
 	}
 }

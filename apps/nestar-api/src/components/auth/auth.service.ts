@@ -1,39 +1,33 @@
 import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { Member } from '../../libs/dto/member/member';
 import { T } from '../../libs/types/common';
+import { JwtService } from '@nestjs/jwt';
 import { shapeIntoMongoObjectId } from '../../libs/config';
-
 @Injectable()
 export class AuthService {
 	constructor(private jwtService: JwtService) {}
-
 	public async hashPassword(memberPassword: string): Promise<string> {
-		const salt = await bcrypt.genSalt();
+		const salt = await bcrypt.genSalt(10);
 		return await bcrypt.hash(memberPassword, salt);
 	}
-	public async comparePasswords(password: string, hashedPassword: string): Promise<boolean> {
+	public async comparePassword(password: string, hashedPassword: string): Promise<boolean> {
 		return await bcrypt.compare(password, hashedPassword);
 	}
-
 	public async createToken(member: Member): Promise<string> {
-		console.log('member', member);
+		console.log('MEMBER:', member);
 		const payload: T = {};
 		Object.keys(member['_doc'] ? member['_doc'] : member).map((ele) => {
 			payload[`${ele}`] = member[`${ele}`];
 		});
 		delete payload.memberPassword;
-		console.log('payload', payload);
-
+		console.log('PAYLOAD:', payload);
 		return await this.jwtService.signAsync(payload);
 	}
-//decode qilib beradi, tekshiradi
-	public async verifyToken(token: string): Promise<Member> {
-		const member = await this.jwtService.verifyAsync(token);
 
-//JWT string beradi → MongoDB ObjectId kutadi → convert qilish kerak
-		member._id = shapeIntoMongoObjectId(member._id);
-		return member;
+	public async verifyToken(token: string): Promise<Member> {
+    const member = await this.jwtService.verifyAsync(token);
+    member._id = shapeIntoMongoObjectId(member._id);
+		return member as Member;
 	}
 }

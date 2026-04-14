@@ -3,6 +3,6 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class NestarBatchService {
   getHello(): string {
-    return 'Welcome to NESTAR BATCH Server!';
+    return 'WELCOME NESTAR_BATCH!';
   }
 }

@@ -4,27 +4,28 @@ import { MemberAuthType, MemberType } from '../../enums/member.enum';
 
 @InputType()
 export class MemberInput {
+	// validations decoratordan tegishlilarini chaqiramiz
+	@IsNotEmpty() // bosh bolmasligi kerak
+	@Length(3, 12)
+	@Field(() => String) // GraphQL type schema generation 시
+	memberNick!: string; // TypeScript compile type
+
 	@IsNotEmpty()
 	@Length(3, 12)
 	@Field(() => String)
-	memberNick: string;
-
-	@IsNotEmpty()
-	@Length(5, 12)
-	@Field(() => String)
-	memberPassword: string;
+	memberPassword!: string;
 
 	@IsNotEmpty()
 	@Field(() => String)
-	memberPhone: string;
+	memberPhone!: string;
 
 	@IsOptional()
-	@Field(() => MemberAuthType, { nullable: true }) //bo'sh bo'lishi mumkin
-	memberAuthType?: MemberAuthType;
-
-	@IsOptional()
-	@Field(() => MemberType, { nullable: true }) //bo'sh bo'lishi mumkin
+	@Field(() => MemberType, { nullable: true }) // null 가능
 	memberType?: MemberType;
+
+	@IsOptional()
+	@Field(() => MemberAuthType, { nullable: true })
+	memberAuthType?: MemberAuthType;
 }
 
 @InputType()
@@ -32,10 +33,10 @@ export class LoginInput {
 	@IsNotEmpty()
 	@Length(3, 12)
 	@Field(() => String)
-	memberNick: string;
+	memberNick!: string;
 
 	@IsNotEmpty()
-	@Length(5, 12)
+	@Length(3, 12)
 	@Field(() => String)
-	memberPassword: string;
+	memberPassword!: string;
 }

@@ -1,5 +1,3 @@
-//Backenddan Frontenga jo'natiladigan DTO'ni hosil qilamiz
-
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { MemberAuthType, MemberStatus, MemberType } from '../../enums/member.enum';
 import { Types } from 'mongoose';
@@ -7,30 +5,31 @@ import { Types } from 'mongoose';
 @ObjectType()
 export class Member {
 	@Field(() => String)
-	_id: Types.ObjectId;
+	_id!: Types.ObjectId;
 
 	@Field(() => MemberType)
-	memberType: MemberType;
+	memberType!: MemberType;
 
 	@Field(() => MemberStatus)
-	memberStatus: MemberStatus;
+	memberStatus!: MemberStatus;
 
 	@Field(() => MemberAuthType)
-	memberAuthType: MemberAuthType;
+	memberAuthType!: MemberAuthType;
 
 	@Field(() => String)
-	memberPhone: string;
+	memberPhone!: string;
 
 	@Field(() => String)
-	memberNick: string;
+	memberNick!: string;
 
-	memberPassword: string;
+	// biz uni graphql ga tanishtirmaymiz
+	memberPassword?: string;
 
 	@Field(() => String, { nullable: true })
 	memberFullName?: string;
 
 	@Field(() => String)
-	memberImage: string;
+	memberImage!: string; // ? nimaga uni dbda required qilmadikku bu yerda nullable qilamayabmiz
 
 	@Field(() => String, { nullable: true })
 	memberAddress?: string;
@@ -39,47 +38,47 @@ export class Member {
 	memberDesc?: string;
 
 	@Field(() => Int)
-	memberProperties: number;
+	memberProperties!: number;
 
 	@Field(() => Int)
-	memberArticles: number;
+	memberArticles!: number;
 
 	@Field(() => Int)
-	memberFollowers: number;
+	memberFollowers!: number;
 
 	@Field(() => Int)
-	memberFollowings: number;
+	memberFollowings!: number;
 
 	@Field(() => Int)
-	memberPoints: number;
+	memberPoints!: number;
 
 	@Field(() => Int)
-	memberLikes: number;
+	memberLikes!: number;
 
 	@Field(() => Int)
-	memberViews: number;
+	memberViews!: number;
 
 	@Field(() => Int)
-	memberComments: number;
+	memberComments!: number;
 
 	@Field(() => Int)
-	memberRank: number;
+	memberRank!: number;
 
 	@Field(() => Int)
-	memberWarnings: number;
+	memberWarnings!: number;
 
 	@Field(() => Int)
-	memberBlocks: number;
+	memberBlocks!: number;
 
 	@Field(() => Date, { nullable: true })
-	deletedAt: Date;
+	deletedAt!: Date;
 
 	@Field(() => Date)
-	createdAt: Date;
+	createdAt!: Date;
 
 	@Field(() => Date)
-	updatedAt: Date;
+	updatedAt!: Date;
 
 	@Field(() => String, { nullable: true })
-	accessToken?: string;
+	accessToken?: string; 
 }

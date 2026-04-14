@@ -14,3 +14,8 @@ export const AuthMember = createParamDecorator((data: string, context: Execution
 	if (member) return data ? member?.[data] : member;
 	else return null;
 });
+
+
+// @AuthMember() => authMember ni butunlay qaytaradi
+// @AuthMember('memberNick') => authMember ichidan memberNick ni qaytaradi 
+// Biz ayni biir data kerak bolsa shuni o'zini sorab olishimiz mumkin . 
