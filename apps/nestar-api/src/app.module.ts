@@ -8,26 +8,29 @@ import { AppResolver } from './app.resolver';
 import { ComponentsModule } from './components/components.module';
 import { DatabaseModule } from './database/database.module';
 import { T } from './libs/types/common';
+
 @Module({
+	//shu class ichida loyiha qismlarini ro‘yxatdan o‘tkazaman
 	imports: [
-		ConfigModule.forRoot(),
+		ConfigModule.forRoot(), // nestar-api server da .env ni o'qishga imkon yaratadi //forRoot()=>Modulni boshlang‘ich sozlama bilan ishga tushir
 		GraphQLModule.forRoot({
-			driver: ApolloDriver,
-			playground: true,
+			//Bu GraphQL modulini NestJS ichiga ulayapti.
+			driver: ApolloDriver, //Bu yerda GraphQL qaysi engine/driver bilan ishlashini aytyapti.
+			playground: true, //test qiladigan maxsus sahifa.
 			uploads: false,
-			autoSchemaFile: true,
+			autoSchemaFile: true, //“Schema faylni NestJS o‘zi avtomatik generatsiya qilsin”
 			formatError: (error: T) => {
-				console.log('error:', error);
-				const graphQLformattedError = {
+				const graphQLFormattedError = {
 					code: error?.extensions.code,
-					message: error?.extensions?.exception?.response.message || error?.extensions?.response.message || error?.message,
+					message:
+						error?.extensions?.exception?.response?.message || error?.extensions?.response?.message || error?.message,
 				};
-				console.log("GRAPHQL GLOBAL ERR:", graphQLformattedError);
-				return graphQLformattedError;
-			}
+				console.log('GRAPHQL GLOBAL ERR:', graphQLFormattedError);
+				return graphQLFormattedError;
+			},
 		}),
-		ComponentsModule,
-		DatabaseModule,
+		ComponentsModule, //HTTP
+		DatabaseModule, //TCP
 	],
 	controllers: [AppController],
 	providers: [AppService, AppResolver],

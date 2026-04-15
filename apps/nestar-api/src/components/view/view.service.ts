@@ -8,20 +8,15 @@ import { T } from '../../libs/types/common';
 @Injectable()
 export class ViewService {
 	constructor(@InjectModel('View') private readonly viewModel: Model<View>) {}
-
 	public async recordView(input: ViewInput): Promise<View | null> {
-		console.log('input:', input);
-
-		const viewExistence = await this.checkViewExistence(input);
-		console.log('viewexis:', viewExistence);
-		if (!viewExistence) {
-			console.log('new view');
+		const viewExist = await this.checkViewExistance(input);
+		if (!viewExist) {
+			console.log('-  New View Insert -');
 			return await this.viewModel.create(input);
 		}
 		return null;
 	}
-
-	private async checkViewExistence(input: ViewInput): Promise<View | null> {
+	private async checkViewExistance(input: ViewInput): Promise<View | null> {
 		const { memberId, viewRefId } = input;
 		const search: T = { memberId: memberId, viewRefId: viewRefId };
 		return await this.viewModel.findOne(search).exec();

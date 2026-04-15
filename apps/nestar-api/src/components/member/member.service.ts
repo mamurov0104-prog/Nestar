@@ -1,68 +1,73 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, ObjectId } from 'mongoose';
+import { Model } from 'mongoose';
 import { Member, Members } from '../../libs/dto/member/member';
 import { AgentsInquiry, LoginInput, MemberInput, MembersInquiry } from '../../libs/dto/member/member.input';
 import { MemberStatus, MemberType } from '../../libs/enums/member.enum';
 import { Direction, Message } from '../../libs/enums/common.enum';
 import { AuthService } from '../auth/auth.service';
 import { MemberUpdate } from '../../libs/dto/member/member.update';
+import { ObjectId } from 'bson';
 import { T } from '../../libs/types/common';
 import { ViewService } from '../view/view.service';
 import { ViewGroup } from '../../libs/enums/view.enum';
+import { ViewInput } from '../../libs/dto/view/view.input';
+
 @Injectable()
 export class MemberService {
 	constructor(
 		@InjectModel('Member') private readonly memberModel: Model<Member>,
-		private authService: AuthService,
+		private authService: AuthService, //inctance olinyapdi
 		private viewService: ViewService,
 	) {}
+	//“NestJS, menga MongoDB’dagi Member modelni ber, men uni memberModel nomi bilan ishlataman”
 
 	public async signup(input: MemberInput): Promise<Member> {
-		// @ts-ignore
+		//TODO: Hash password
 		input.memberPassword = await this.authService.hashPassword(input.memberPassword);
+
 		try {
 			const result = await this.memberModel.create(input);
+
+			//TODO: Authentication via TOKEN
 			result.accessToken = await this.authService.createToken(result);
 			return result;
-		} catch (error: any) {
-			console.log('Error, Service.model:', error.message);
+		} catch (err) {
+			console.log('Error, Service.model', err.message); //? Mongodb error message?
 			throw new BadRequestException(Message.USED_MEMBER_NICK_OR_PHONE);
 		}
 	}
+
 	public async login(input: LoginInput): Promise<Member> {
 		const { memberNick, memberPassword } = input;
 		const response: Member | null = await this.memberModel
 			.findOne({ memberNick: memberNick })
 			.select('+memberPassword')
 			.exec();
-
 		if (!response || response.memberStatus === MemberStatus.DELETE) {
 			throw new InternalServerErrorException(Message.NO_MEMBER_NICK);
 		} else if (response.memberStatus === MemberStatus.BLOCK) {
 			throw new InternalServerErrorException(Message.BLOCKED_USER);
 		}
-		// @ts-ignore
+		//TODO : Compare passwords
 		const isMatch = await this.authService.comparePasswords(input.memberPassword, response.memberPassword);
+		if (!isMatch) throw new InternalServerErrorException(Message.WRONG_PASSWORD);
+
 		response.accessToken = await this.authService.createToken(response);
+
 		return response;
 	}
+
 	public async updateMember(memberId: ObjectId, input: MemberUpdate): Promise<Member> {
 		const result: Member | null = await this.memberModel
-			.findOneAndUpdate(
-				{
-					_id: memberId,
-					memberStatus: MemberStatus.ACTIVE,
-				},
-				input,
-				{ new: true },
-			)
+			.findOneAndUpdate({ _id: memberId, memberStatus: MemberStatus.ACTIVE }, input, { new: true })
 			.exec();
-		if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);
+		if (!result) throw new InternalServerErrorException(Message.UPLOAD_FAILED);
 
 		result.accessToken = await this.authService.createToken(result);
 		return result;
 	}
+
 	public async getMember(memberId: ObjectId, targetId: ObjectId): Promise<Member> {
 		const search: T = {
 			_id: targetId,
@@ -72,71 +77,101 @@ export class MemberService {
 		};
 		const targetMember = await this.memberModel.findOne(search).lean().exec();
 		if (!targetMember) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
-		console.log(memberId);
+
 		if (memberId) {
 			const viewInput = { memberId: memberId, viewRefId: targetId, viewGroup: ViewGroup.MEMBER };
 			const newView = await this.viewService.recordView(viewInput);
-
 			if (newView) {
-				await this.memberModel.findByIdAndUpdate(targetId, { $inc: { memberViews: 1 } }, { new: true }).exec();
-				targetMember.memberViews!++;
+				await this.memberModel.findOneAndUpdate(search, { $inc: { memberViewCount: 1 } }, { new: true }).exec();
+				targetMember.memberViews++;
 			}
+
+			// increese view count
+			//meLikes
+			//meFollowed
 		}
+
 		return targetMember;
 	}
 
 	public async getAgents(memberId: ObjectId, input: AgentsInquiry): Promise<Members> {
-		//@ts-ignore
 		const { text } = input.search;
-		const match: T = { memberType: MemberType.AGENT, memberStatus: MemberStatus.ACTIVE };
-		const sort: T = { [input?.sort ?? 'createdAt']: input?.direction ?? Direction.DESC };
 
-		if (text) match.memberNick = { $regex: new RegExp(text, 'i') };
+		const match: T = {
+			memberType: MemberType.AGENT,
+			memberStatus: MemberStatus.ACTIVE,
+		};
 
-		const result = await this.memberModel.aggregate([
-			{ $match: match },
-			{ $sort: sort },
-			{
-				$facet: {
-					// @ts-ignore
-					list: [{ $skip: (input.page - 1) * input.limit }, { $limit: input.limit }],
-					metaCounter: [{ $count: 'total' }],
+		const sort: T = {
+			[input?.sort ?? 'createdAt']: input?.direction ?? Direction.DESC,
+		};
+
+		if (text) {
+			match.memberNick = { $regex: new RegExp(text, 'i') };
+		}
+
+		console.log('match:', match);
+
+		const result = await this.memberModel
+			.aggregate([
+				{ $match: match },
+				{ $sort: sort },
+				{
+					$facet: {
+						list: [{ $skip: (input.page - 1) * input.limit }, { $limit: input.limit }],
+						metaCounter: [{ $count: 'total' }],
+					},
 				},
-			},
-		]);
-		if (!result.length) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+			])
+			.exec();
+		if (!result.length) {
+			throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+		}
+
 		return result[0];
 	}
+	/** ADMIN **/
 
 	public async getAllMembersByAdmin(input: MembersInquiry): Promise<Members> {
-		//@ts-ignore
 		const { memberStatus, memberType, text } = input.search;
+
 		const match: T = {};
-		const sort: T = { [input?.sort ?? 'createdAt']: input?.direction ?? Direction.DESC };
-		if (memberStatus) match.MemberStatus = memberStatus;
-		if (memberType) match.MemberNick = { $regex: new RegExp(text, 'i') };
+
+		const sort: T = {
+			[input?.sort ?? 'createdAt']: input?.direction ?? Direction.DESC,
+		};
+
+		if (memberStatus) match.memberStatus = memberStatus;
+		if (memberType) match.memberType = memberType;
 		if (text) match.memberNick = { $regex: new RegExp(text, 'i') };
 
-		const result = await this.memberModel.aggregate([
-			{ $match: match },
-			{ $sort: sort },
-			{
-				$facet: {
-					// @ts-ignore
-					list: [{ $skip: (input.page - 1) * input.limit }, { $limit: input.limit }],
-					metaCounter: [{ $count: 'total' }],
+		console.log('match:', match);
+
+		const result = await this.memberModel
+			.aggregate([
+				{ $match: match },
+				{ $sort: sort },
+				{
+					$facet: {
+						list: [{ $skip: (input.page - 1) * input.limit }, { $limit: input.limit }],
+						metaCounter: [{ $count: 'total' }],
+					},
 				},
-			},
-		]);
-		if (!result.length) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+			])
+			.exec();
+
+		if (!result.length) {
+			throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+		}
+
 		return result[0];
 	}
+
 	public async updateMemberByAdmin(input: MemberUpdate): Promise<Member> {
 		const result: Member | null = await this.memberModel
 			.findOneAndUpdate({ _id: input._id }, input, { new: true })
 			.exec();
 		if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);
-
 		return result;
 	}
 }
