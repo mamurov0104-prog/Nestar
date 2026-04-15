@@ -4,5 +4,7 @@ import { LikeResolver } from './like.resolver';
 
 @Module({
   providers: [LikeResolver, LikeService],
+  exports: [LikeService],
+  
 })
 export class LikeModule {}
