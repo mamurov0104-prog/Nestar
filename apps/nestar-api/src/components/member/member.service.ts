@@ -68,31 +68,39 @@ export class MemberService {
 		return result;
 	}
 
-	public async getMember(memberId: ObjectId, targetId: ObjectId): Promise<Member> {
-		const search: T = {
-			_id: targetId,
-			memberStatus: {
-				$in: [MemberStatus.ACTIVE, MemberStatus.BLOCK],
-			},
-		};
-		const targetMember = await this.memberModel.findOne(search).lean().exec();
-		if (!targetMember) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+	// member.service.ts ichida getMember metodini quyidagicha yangilang:
 
-		if (memberId) {
-			const viewInput = { memberId: memberId, viewRefId: targetId, viewGroup: ViewGroup.MEMBER };
-			const newView = await this.viewService.recordView(viewInput);
-			if (newView) {
-				await this.memberModel.findOneAndUpdate(search, { $inc: { memberViewCount: 1 } }, { new: true }).exec();
-				targetMember.memberViews++;
-			}
+public async getMember(memberId: ObjectId | null, targetId: ObjectId): Promise<Member> {
+    const search: T = {
+        _id: targetId,
+        memberStatus: {
+            $in: [MemberStatus.ACTIVE, MemberStatus.BLOCK],
+        },
+    };
 
-			// increese view count
-			//meLikes
-			//meFollowed
-		}
+    const targetMember = await this.memberModel.findOne(search).lean().exec();
+    if (!targetMember) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-		return targetMember;
-	}
+    // Agar murojaat qiluvchi (memberId) tizimga kirgan bo'lsa va 
+    // o'zining profiliga emas, boshqaninkiga kirayotgan bo'lsa ko'rishlar sonini oshiramiz
+    if (memberId && !memberId.equals(targetId)) {
+        const viewInput: ViewInput = { 
+            memberId: memberId, 
+            viewRefId: targetId, 
+            viewGroup: ViewGroup.MEMBER 
+        };
+        
+        const newView = await this.viewService.recordView(viewInput);
+        if (newView) {
+            await this.memberModel
+                .findOneAndUpdate(search, { $inc: { memberViews: 1 } }, { new: true })
+                .exec();
+            targetMember.memberViews++;
+        }
+    }
+
+    return targetMember;
+}
 
 	public async getAgents(memberId: ObjectId, input: AgentsInquiry): Promise<Members> {
 		const { text } = input.search;
