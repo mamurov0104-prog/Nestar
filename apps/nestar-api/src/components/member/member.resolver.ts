@@ -87,16 +87,48 @@ export class MemberResolver {
 		return await this.memberService.getAgents(memberId, input);
 	}
 
-	@UseGuards(AuthGuard)
-	@Mutation(() => Member)
-	public async likeTargetMember(
-		@Args('memberId') input: string, 
-		@AuthMember('_id') memberId: ObjectId
-	): Promise<Member> {
-		console.log('Mutation: likeTargetMember');
-		const likeRefId = shapeIntoMongoObjectId(input);
-		return await this.memberService.likeTargetMember(memberId, likeRefId);
-	}
+/**
+     * =========================================================================================
+     * LIKE TARGET MEMBER MUTATION - FOYDALANUVCHIGA LAYK BOSISH AMALI
+     * =========================================================================================
+     * Maqsad: Frontenddan kelgan GraphQL so'rovini qabul qilib, Service-ga yo'naltirish.
+     */
+    @UseGuards(AuthGuard) // 1. XAVFSIZLIK: Faqat tizimdan ro'yxatdan o'tgan (login qilgan) foydalanuvchilar layk bosa oladi.
+    @Mutation(() => Member) // 2. GRAPHQL TYPE: Bu amal bazada o'zgarish sodir etadi va natijada yangilangan 'Member' ob'ektini qaytaradi.
+    public async likeTargetMember(
+        /**
+         * 3. @Args('memberId') input: string 
+         * Frontenddan (mijozdan) kelayotgan layk olayotgan foydalanuvchining ID-si. 
+         * GraphQL-da u string ko'rinishida yuboriladi.
+         */
+        @Args('memberId') input: string, 
+
+        /**
+         * 4. @AuthMember('_id') memberId: ObjectId
+         * Maxsus dekorator yordamida request-dan (JWT token orqali) layk bosayotgan 
+         * shaxsning (Sizning) shaxsiy ID-singizni avtomatik ajratib olamiz.
+         */
+        @AuthMember('_id') memberId: ObjectId
+    ): Promise<Member> {
+        // 5. MONITORING: Terminalda qaysi amal bajarilayotganini ko'rib turish uchun log.
+        console.log('Mutation: likeTargetMember');
+
+        /**
+         * 6. DATA TRANSFORMATION:
+         * Frontenddan kelgan 'string' ID-ni Mongoose aggregatsiyalari va servislar 
+         * tushunadigan 'ObjectId' formatiga o'tkazish shart.
+         */
+        const likeRefId = shapeIntoMongoObjectId(input);
+
+        /**
+         * 7. SERVICE CALL:
+         * Barcha murakkab biznes mantiq (o'z-o'ziga layk bosmaslikni tekshirish, 
+         * statistikani oshirish) servis qatlamida bajariladi.
+         * memberId: Kim layk bosdi.
+         * likeRefId: Kim layk oldi.
+         */
+        return await this.memberService.likeTargetMember(memberId, likeRefId);
+    }
 
 	/**	ADMIN	**/
 

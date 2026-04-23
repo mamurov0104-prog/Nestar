@@ -221,29 +221,72 @@ export class PropertyService {
         return result[0];
     }
 
-    public async likeTargetProperty(memberId: ObjectId, likeRefId: ObjectId): Promise<Property> {
-        const target: Property | null = await this.propertyModel
-            .findOne({ _id: likeRefId, propertyStatus: PropertyStatus.ACTIVE })
-            .exec();
-        if (!target) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+  /**
+ * =========================================================================================
+ * LIKE TARGET PROPERTY - KO'CHMAS MULK E'LONIGA LAYK BOSISH SERVISI
+ * =========================================================================================
+ * @param memberId - Layk bosayotgan foydalanuvchining ID-si.
+ * @param likeRefId - Layk olinayotgan e'lonning (Property) ID-si.
+ */
+public async likeTargetProperty(memberId: ObjectId, likeRefId: ObjectId): Promise<Property> {
+    
+    /**
+     * 1-QADAM: TARGET VALIDATION (E'LONNI TEKSHIRISH).
+     * Biz faqat bazada mavjud bo'lgan va statusi "ACTIVE" bo'lgan e'lonlarga layk bosa olamiz.
+     * Sotilgan, o'chirilgan yoki bloklangan (PAUSE) e'lonlarga layk bosish mantiqsiz.
+     */
+    const target: Property | null = await this.propertyModel
+        .findOne({ 
+            _id: likeRefId, 
+            propertyStatus: PropertyStatus.ACTIVE 
+        })
+        .exec();
 
-        const input: LikeInput = {
-            memberId: memberId as any,
-            likeRefId: likeRefId as any,
-            likeGroup: LikeGroup.PROPERTY,
-        };
+    // Agar e'lon topilmasa yoki aktiv bo'lmasa, foydalanuvchiga xato qaytaramiz.
+    if (!target) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-        const modifier = await this.likeService.toggleLike(input);
-        const result = await this.propertyStatsEditor({
-            // propertyni static datasi yangilanadi
-            _id: likeRefId as any,
-            targetKey: 'propertyLikes',
-            modifier: modifier,
-        });
-        if (!result) throw new InternalServerErrorException(Message.SOMETHING_WENT_WRONG);
+    /**
+     * 2-QADAM: LIKE INPUT PREPARATION (MA'LUMOTNI TAYYORLASH).
+     * LikeService-ga yuborish uchun maxsus ob'ekt shakllantiramiz.
+     * Bu yerda 'likeGroup: LikeGroup.PROPERTY' ekanligi juda muhim, chunki 
+     * tizim layk aynan ko'chmas mulkka tegishli ekanini shundan biladi.
+     */
+    const input: LikeInput = {
+        memberId: memberId as any,  // Kim tomonidan layk bosildi
+        likeRefId: likeRefId as any, // Qaysi e'longa layk bosildi
+        likeGroup: LikeGroup.PROPERTY, // Layk turi: Property (Ko'chmas mulk)
+    };
 
-        return result;
-    }
+    /**
+     * 3-QADAM: TOGGLE LOGIC (LAYKNI YOQISH YOKI O'CHIRISH).
+     * Bu yerda 'LikeService' ga murojaat qilamiz. 
+     * U bazada layk bor-yo'qligini tekshiradi:
+     * - Bo'lsa: o'chiradi va -1 qaytaradi.
+     * - Bo'lmasa: yaratadi va 1 qaytaradi.
+     */
+    const modifier = await this.likeService.toggleLike(input);
+
+    /**
+     * 4-QADAM: ASOSIY MODEL STATISTIKASINI YANGILASH (DENORMALIZATSIYA).
+     * Biz har safar layklarni sanab o'tirmaslik uchun 'Property' modelining ichidagi 
+     * 'propertyLikes' maydonini atomar tarzda (+1 yoki -1) yangilaymiz.
+     */
+    const result = await this.propertyStatsEditor({
+        _id: likeRefId as any, // Qaysi e'lonning statistikasi o'zgaradi
+        targetKey: 'propertyLikes', // Aynan layklar soni maydoni
+        modifier: modifier, // 1 yoki -1 (LikeService dan kelgan qiymat)
+    });
+
+    /**
+     * 5-QADAM: FINAL CHECK (YAKUNIY NAZORAT).
+     * Agar statistikani yangilashda kutilmagan texnik xatolik yuz bersa, 
+     * 'Something went wrong' xatosini qaytaramiz.
+     */
+    if (!result) throw new InternalServerErrorException(Message.SOMETHING_WENT_WRONG);
+
+    // Yangilangan, yangi layklar soniga ega bo'lgan e'lon ob'ektini qaytaramiz.
+    return result;
+}
 
     /** ADMIN */
     public async getAllPropertiesByAdmin(input: AllPropertiesInquiry): Promise<Properties> {

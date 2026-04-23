@@ -159,30 +159,73 @@ export class MemberService {
         return result[0];
     }
 
-    public async likeTargetMember(memberId: ObjectId, likeRefId: ObjectId): Promise<Member> {
-        const target: Member | null = await this.memberModel
-            .findOne({ _id: likeRefId, memberStatus: MemberStatus.ACTIVE })
-            .exec();
-        if (!target) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+  /**
+ * =========================================================================================
+ * LIKE TARGET MEMBER - FOYDALANUVCHI PROFILIGA LAYK BOSISH MANTIG'I
+ * =========================================================================================
+ * @param memberId - Layk bosayotgan shaxsning ID-si (Siz)
+ * @param likeRefId - Layk olayotgan shaxsning ID-si (Target)
+ * @returns Yangilangan foydalanuvchi ma'lumotlari
+ */
+public async likeTargetMember(memberId: ObjectId, likeRefId: ObjectId): Promise<Member> {
+    
+    /**
+     * 1-QADAM: Target (Layk olayotgan) foydalanuvchining mavjudligini tekshirish.
+     * Biz faqat "ACTIVE" statusdagi foydalanuvchilarga layk bosa olamiz.
+     * O'chirilgan yoki bloklangan foydalanuvchiga layk bosish mantiqsizlikdir.
+     */
+    const target: Member | null = await this.memberModel
+        .findOne({ 
+            _id: likeRefId, 
+            memberStatus: MemberStatus.ACTIVE 
+        })
+        .exec();
 
-        const input: LikeInput = {
-            memberId: memberId,
-            likeRefId: likeRefId,
-            likeGroup: LikeGroup.MEMBER,
-        };
-        // LikeToggle
+    // Agar foydalanuvchi topilmasa, tizim darhol xato qaytaradi (Data integrity protection)
+    if (!target) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-        const modifier = await this.likeService.toggleLike(input);
-        const result = await this.memberStatsEditor({
-            // memberimizni static datasi yangilanadi
-            _id: likeRefId as any, // 'as any' - TS2740 (ObjectId properties missing) xatosini tuzatadi
-            targetKey: 'memberLikes',
-            modifier: modifier,
-        });
-        if (!result) throw new InternalServerErrorException(Message.SOMETHING_WENT_WRONG);
+    /**
+     * 2-QADAM: Layk kiritish ob'ektini (Input) tayyorlash.
+     * Bu yerda biz 'LikeGroup.MEMBER' deb belgilaymiz, chunki bu layk
+     * Property yoki Article uchun emas, aynan shaxs uchun berilmoqda.
+     */
+    const input: LikeInput = {
+        memberId: memberId,     // Kim tomonidan
+        likeRefId: likeRefId,   // Kimga nisbatan
+        likeGroup: LikeGroup.MEMBER, // Layk turi: Foydalanuvchi
+    };
 
-        return result;
-    }
+    /**
+     * 3-QADAM: LikeService-dagi toggleLike metodini ishga tushirish.
+     * Bu yerda "Abstraction" qo'llanilgan: memberService o'zi layk yaratmaydi,
+     * balki bu vazifani LikeService-ga topshiradi.
+     * modifier bizga 1 (qo'shildi) yoki -1 (o'chirildi) qiymatini qaytaradi.
+     */
+    const modifier = await this.likeService.toggleLike(input);
+
+    /**
+     * 4-QADAM: Denormalizatsiya - Statistikani real vaqtda yangilash.
+     * Target foydalanuvchining profilidagi 'memberLikes' hisoblagichini o'zgartiramiz.
+     * Bu orqali har safar profil ochilganda layklarni qayta sanab o'tirmaymiz,
+     * tayyor sonni ko'rsatamiz.
+     */
+    const result = await this.memberStatsEditor({
+        // Target foydalanuvchining ID-sini 'as any' orqali yuboramiz (TS xatoligini chetlab o'tish)
+        _id: likeRefId as any, 
+        targetKey: 'memberLikes', // Aynan layklar sonini saqlaydigan maydon
+        modifier: modifier,       // +1 yoki -1
+    });
+
+    /**
+     * 5-QADAM: Yakuniy tekshiruv.
+     * Agar statistikani yangilashda kutilmagan xato bo'lsa (baza ulanishi uzilsa va hk),
+     * foydalanuvchiga xabar beramiz.
+     */
+    if (!result) throw new InternalServerErrorException(Message.SOMETHING_WENT_WRONG);
+
+    // Yangilangan (layk soni o'zgargan) member ob'ektini qaytaramiz.
+    return result;
+}
 
     public async getAllMembersByAdmin(input: MembersInquiry): Promise<Members> {
         const { memberStatus, memberType, text } = input.search;

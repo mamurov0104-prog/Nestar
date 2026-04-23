@@ -98,16 +98,50 @@ export class PropertyResolver {
 		return await this.propertyService.getAgentProperties(memberId, input);
 	}
 
-	@UseGuards(AuthGuard)
-	@Mutation(() => Property)
-	public async likeTargetProperty(
-		@Args('propertyId') input: string,
-		@AuthMember('_id') memberId: ObjectId,
-	): Promise<Property> {
-		console.log('Mutation: likeTargetProperty');
-		const likeRefId = shapeIntoMongoObjectId(input);
-		return await this.propertyService.likeTargetProperty(memberId, likeRefId);
-	}
+/**
+     * =========================================================================================
+     * LIKE TARGET PROPERTY MUTATION - E'LONGA LAYK BOSISH AMALI
+     * =========================================================================================
+     * Foydalanuvchi ko'chmas mulk e'loniga layk bosganda ushbu "darvoza" orqali o'tadi.
+     */
+    @UseGuards(AuthGuard) // 1. XAVFSIZLIK FILTRI: Faqat ro'yxatdan o'tganlar layk bosa oladi. 
+                         // Anonim foydalanuvchilar (mehmonlar) uchun bu amal yopiq.
+    @Mutation(() => Property) // 2. GRAPHQL SCHEMA: Bu amal bazada o'zgarish qiladi (Mutation) 
+                              // va natija sifatida yangilangan 'Property' ob'ektini qaytaradi.
+    public async likeTargetProperty(
+        /**
+         * 3. @Args('propertyId') input: string
+         * Frontend (React/Next.js) dan kelayotgan e'lonning identifikator raqami (ID).
+         * GraphQL-da u string formatida qabul qilinadi.
+         */
+        @Args('propertyId') input: string,
+
+        /**
+         * 4. @AuthMember('_id') memberId: ObjectId
+         * Bu juda muhim qism! JWT token ichidan layk bosayotgan shaxsning (Sizning) 
+         * ID-ingizni xavfsiz tarzda sug'urib oladi.
+         */
+        @AuthMember('_id') memberId: ObjectId,
+    ): Promise<Property> {
+        // 5. DEBUGGING: Server loglarida qaysi funksiya ishlayotganini ko'rish uchun.
+        console.log('Mutation: likeTargetProperty');
+
+        /**
+         * 6. TYPE CASTING (O'GIRISH):
+         * Frontenddan kelgan oddiy stringni Mongoose (MongoDB) tushunadigan 
+         * maxsus 'ObjectId' formatiga aylantiramiz. Aks holda baza bilan xato beradi.
+         */
+        const likeRefId = shapeIntoMongoObjectId(input);
+
+        /**
+         * 7. DELEGATION (VAZIFANI TOPSHIRISH):
+         * Resolver o'zi biznes mantiq bilan shug'ullanmaydi. 
+         * U ma'lumotlarni tartibga solib, 'propertyService' ga topshiradi.
+         * memberId: Kim layk bosyapti.
+         * likeRefId: Qaysi e'longa bosyapti.
+         */
+        return await this.propertyService.likeTargetProperty(memberId, likeRefId);
+    }
 
 	/** ADMIN **/
 
