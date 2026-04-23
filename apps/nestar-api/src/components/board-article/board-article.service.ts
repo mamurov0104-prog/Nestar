@@ -31,13 +31,13 @@ export class BoardArticleService {
         try {
             const result = await this.boardArticleModel.create(input);
             await this.memberService.memberStatsEditor({
-                _id: memberId as any, // TS2740 xatosini oldini olish uchun
+                _id: memberId as any, // TS2740 xatasini tuzatish
                 targetKey: 'memberArticles',
                 modifier: 1,
             });
             return result;
         } catch (err) {
-            console.log('Error, Service.model:', err);
+            console.log('Error, Service.createBoardArticle:', err);
             throw new BadRequestException(Message.CREATE_FAILED);
         }
     }
@@ -47,8 +47,12 @@ export class BoardArticleService {
             _id: articleId,
             articleStatus: BoardArticleStatus.ACTIVE,
         };
-        // TS2322 xatosi uchun: .lean() natijasini 'as BoardArticle' deb belgilaymiz
-        const targetBoardArticle: BoardArticle = await this.boardArticleModel.findOne(search).lean().exec() as BoardArticle;
+        
+        const targetBoardArticle: BoardArticle = await this.boardArticleModel
+            .findOne(search)
+            .lean()
+            .exec() as BoardArticle;
+            
         if (!targetBoardArticle) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
         if (memberId) {
@@ -64,7 +68,8 @@ export class BoardArticleService {
             }
         }
         
-        targetBoardArticle.memberData = await this.memberService.getMember(null, targetBoardArticle.memberId as any);
+        // Terminaldagi TS2345 xatosini (null is not assignable to ObjectId) tuzatish:
+        targetBoardArticle.memberData = await this.memberService.getMember(null as any, targetBoardArticle.memberId as any);
         return targetBoardArticle;
     }
 
@@ -100,8 +105,6 @@ export class BoardArticleService {
         if (input.search?.memberId) {
             match.memberId = shapeIntoMongoObjectId(input.search.memberId);
         }
-
-        console.log('match:', match);
 
         const result = await this.boardArticleModel
             .aggregate([
@@ -165,7 +168,7 @@ export class BoardArticleService {
         const { _id, articleStatus } = input;
 
         const result = await this.boardArticleModel
-            .findOneAndUpdate({ _id: _id, articleStatus: BoardArticleStatus.ACTIVE }, input, { new: true })
+            .findOneAndUpdate({ _id: _id }, input, { new: true })
             .exec();
 
         if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);
@@ -198,6 +201,6 @@ export class BoardArticleService {
         const { _id, targetKey, modifier } = input;
         return this.boardArticleModel
             .findByIdAndUpdate(_id, { $inc: { [targetKey]: modifier } }, { new: true })
-            .exec() as any; // TS2322 xatosi uchun
+            .exec() as any; 
     }
 }

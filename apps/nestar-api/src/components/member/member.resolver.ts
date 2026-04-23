@@ -1,13 +1,13 @@
-import { Resolver, Query, Args, Mutation } from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { MemberService } from './member.service';
 import { AgentsInquiry, LoginInput, MemberInput, MembersInquiry } from '../../libs/dto/member/member.input';
 import { Member, Members } from '../../libs/dto/member/member';
 import { UseGuards } from '@nestjs/common';
-import { AuthGuard } from '../auth/guards/auth.guard';
 import { AuthMember } from '../auth/decorators/authMember.decorator';
-import { ObjectId } from 'bson';
-import { Roles } from '../auth/decorators/roles.decorator';
+import { AuthGuard } from '../auth/guards/auth.guard';
+import type { ObjectId } from 'mongoose';
 import { MemberType } from '../../libs/enums/member.enum';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { MemberUpdate } from '../../libs/dto/member/member.update';
 import { getSerialForImage, shapeIntoMongoObjectId, validMimeTypes } from '../../libs/config';
@@ -19,100 +19,118 @@ import { Message } from '../../libs/enums/common.enum';
 @Resolver()
 export class MemberResolver {
 	constructor(private readonly memberService: MemberService) {}
-	//Querty Rest Api'dagi => GET
-	//Mutation Rest Api'dagi => POST
 
 	@Mutation(() => Member)
-	public async signup(@Args('input') input: MemberInput): Promise<Member> {
-		//Args = Arguments //NestJS requestdan input ni olib, seni functioning ichidagi input o‘zgaruvchisiga joylayapti.
-		console.log('Mutation signup');
-		console.log('input', input);
-		const result = await this.memberService.signup(input);
-		return result;
-	}
-
-	@Mutation(() => Member)
-	public async login(@Args('input') input: LoginInput): Promise<Member> {
-		console.log('Mutation login');
-		return await this.memberService.login(input);
-	}
-
-	//Authentication
-	@UseGuards(AuthGuard)
-	@Mutation(() => Member)
-	//authenticate bo'lgan memberni ma'lumotini olish uchun createParam decorator yozish kerak bo'ldi
-	public async updateMember(
-		@Args('input') input: MemberUpdate,
-		@AuthMember('_id') memberId: ObjectId,
+	public async signup(
+		@Args('input') input: MemberInput
 	): Promise<Member> {
-		console.log('Mutation updateMember');
-		console.log('memberId', memberId);
+		console.log('Mutation: singup');
+		return await this.memberService.signup(input);
+	}
 
-		return await this.memberService.updateMember(memberId, input);
+	@Mutation(() => Member)
+	public async login(
+		@Args('input') input: LoginInput
+	): Promise<Member> {
+		console.log('Mutation: login');
+		return await this.memberService.login(input);
 	}
 
 	@UseGuards(AuthGuard)
 	@Query(() => String)
-	//authenticate bo'lgan memberni ma'lumotini olish uchun createParam decorator yozish kerak bo'ldi
-	public async checkAuth(@AuthMember('memberNick') memberNick: string): Promise<string> {
-		console.log('Query checkAuth');
-		console.log('memberNick', memberNick);
-		return `Hi ${memberNick}, you are authenticated!`;
+	public async checkAuth(
+		@AuthMember('memberNick') memberNick: string
+	): Promise<string> {
+		console.log('Query сheckAuth');
+		console.log(memberNick);
+		return `hi ${memberNick}`;
 	}
 
 	@Roles(MemberType.USER, MemberType.AGENT)
 	@UseGuards(RolesGuard)
 	@Query(() => String)
-	public async checkAuthRoles(@AuthMember() authMember: Member): Promise<string> {
-		console.log('Query checkAuthRoles');
-		// console.log('authMember', authMember);
-		return `Hi ${authMember.memberNick},you are ${authMember.memberType} your member id are ${authMember._id} !`;
+	public async checkAuthRoles(
+		@AuthMember() authMember: Member
+	): Promise<string> {
+		console.log('Query checkAuth');
+		return `hi ${authMember.memberNick},you are ${authMember.memberType} (member_id:${authMember._id})`;
 	}
+
+	@UseGuards(AuthGuard)
+	@Mutation(() => Member)
+	public async updateMember(
+		@Args('input') input: MemberUpdate,
+		@AuthMember('_id') memberId: ObjectId,
+	): Promise<Member> {
+		console.log('Mutation updateMember');
+		// delete input._id;
+		return await this.memberService.updateMember(memberId, input);
+	}
+
 	@UseGuards(WithoutGuard)
 	@Query(() => Member)
-	public async getMember(@Args('input') input: string, @AuthMember('_id') memberId: ObjectId): Promise<Member> {
-		console.log('Mutation getMember');
-
+	public async getMember(
+		@Args('memberId') input: string, 
+		@AuthMember('_id') memberId: ObjectId
+	): Promise<Member> {
+		console.log('Query: getMember');
 		const targetId = shapeIntoMongoObjectId(input);
-
 		return await this.memberService.getMember(memberId, targetId);
 	}
 
 	@UseGuards(WithoutGuard)
-	@Query(() => Members)
-	public async getAgents(@Args('input') input: AgentsInquiry, @AuthMember('_id') memberId: ObjectId): Promise<Members> {
-		console.log('Query getAgents');
+	@Query(() => Members) // ixtiyoriy member ishlata oladi
+	public async getAgents(
+		@Args('input') input: AgentsInquiry, 
+		@AuthMember('_id') memberId: ObjectId): Promise<Members> {
+		console.log('Query: getAgents');
 		return await this.memberService.getAgents(memberId, input);
 	}
 
-	/** ADMIN **/
+	@UseGuards(AuthGuard)
+	@Mutation(() => Member)
+	public async likeTargetMember(
+		@Args('memberId') input: string, 
+		@AuthMember('_id') memberId: ObjectId
+	): Promise<Member> {
+		console.log('Mutation: likeTargetMember');
+		const likeRefId = shapeIntoMongoObjectId(input);
+		return await this.memberService.likeTargetMember(memberId, likeRefId);
+	}
 
-	//Authorization: ADMIN
+	/**	ADMIN	**/
+
+	// Authorization:ADMIN
 	@Roles(MemberType.ADMIN)
 	@UseGuards(RolesGuard)
 	@Query(() => Members)
-	public async getAllMembersByAdmin(@Args('input') input: MembersInquiry): Promise<Members> {
-		console.log('Mutation getAllMembersByAdmin');
+	public async getAllMembersByAdmin(
+		@Args('input') input: MembersInquiry
+	): Promise<Members> {
+		console.log('Mutation: getAllMembersByAdmin');
 		return await this.memberService.getAllMembersByAdmin(input);
 	}
-
-	//Authorization: ADMIN
+	// Authorization:ADMIN
 	@Roles(MemberType.ADMIN)
 	@UseGuards(RolesGuard)
 	@Mutation(() => Member)
-	public async updateMemberByAdmin(@Args('input') input: MemberUpdate): Promise<Member> {
-		console.log('Mutation updateMemberByAdmin');
+	public async updateMemberByAdmin(
+		@Args('input') input: MemberUpdate
+	): Promise<Member> {
+		// console.log('input', input);
+		console.log('Mutation: updateMemberByAdmin');
+
 		return await this.memberService.updateMemberByAdmin(input);
 	}
 
-	/*  UPLOADER  */
+	/** UPLOADER **/
 
 	@UseGuards(AuthGuard)
 	@Mutation((returns) => String)
 	public async imageUploader(
-		@Args({ name: 'file', type: () => GraphQLUpload }) //file nomi ostida image kirib keladi, va bu file ni GraphQLUpload turida qabul qilamiz, chunki bu file upload qilish uchun maxsus tur
+		@Args({ name: 'file', type: () => GraphQLUpload })
 		{ createReadStream, filename, mimetype }: FileUpload,
-		@Args('target') target: String, // serverga yuboradigan imgni qaysi papkaga joylashtirish kerakligini bildiradi (member, property, article)
+		@Args('target') target: String,
 	): Promise<string> {
 		console.log('Mutation: imageUploader');
 
@@ -139,7 +157,7 @@ export class MemberResolver {
 	@Mutation((returns) => [String])
 	public async imagesUploader(
 		@Args('files', { type: () => [GraphQLUpload] })
-		files: Promise<FileUpload>[], // destruction qilyapmiz FileUpload ichidan ajratib olyapmiz
+		files: Promise<FileUpload>[],
 		@Args('target') target: String,
 	): Promise<string[]> {
 		console.log('Mutation: imagesUploader');

@@ -1,125 +1,110 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, ObjectId, Types } from 'mongoose';
-import { AgentPropertiesInquiry, AllPropertiesInquiry, PISearch, PropertiesInquiry, PropertyInput } from '../../libs/dto/property/property.input';
+import { Model } from 'mongoose';
+// MUHIM: ObjectId ni 'import type' orqali olish isolatedModules xatosini yopadi
+import type { ObjectId } from 'mongoose'; 
 import { Properties, Property } from '../../libs/dto/property/property';
 import { Direction, Message } from '../../libs/enums/common.enum';
+import {
+    AgentPropertiesInquiry,
+    AllPropertiesInquiry,
+    OrdinaryInquiry,
+    PISearch,
+    PropertiesInquiry,
+    PropertyInput,
+} from '../../libs/dto/property/property.input';
 import { MemberService } from '../member/member.service';
-import { ViewInput } from '../../libs/dto/view/view.input';
 import { StatisticModifier, T } from '../../libs/types/common';
-import { LikeService } from '../like/like.service';
-import { ViewService } from '../view/view.service';
 import { PropertyStatus } from '../../libs/enums/property.enum';
 import { ViewGroup } from '../../libs/enums/view.enum';
-import { lookupAuthMemberLiked, lookupMember, shapeIntoMongoObjectId } from '../../libs/config';
+import { ViewInput } from '../../libs/dto/view/view.input';
+import { ViewService } from '../view/view.service';
 import { PropertyUpdate } from '../../libs/dto/property/property.update';
+// import * as moment from 'moment';
+// import * as moment from 'moment';
 import moment from 'moment';
+
+import { lookupAuthMemberLiked, lookupMember, shapeIntoMongoObjectId } from '../../libs/config';
+import { LikeInput } from '../../libs/dto/like/like.input';
+import { LikeGroup } from '../../libs/enums/like.enum';
+import { LikeService } from '../like/like.service';
 
 @Injectable()
 export class PropertyService {
     constructor(
-        // Property modelini loyihaga ulaymiz
         @InjectModel('Property') private readonly propertyModel: Model<Property>,
-        // Tashqi servicelarni inject qilamiz
         private memberService: MemberService,
         private viewService: ViewService,
         private likeService: LikeService,
     ) {}
 
-    /** YANGI PROPERTY YARATISH **/
     public async createProperty(input: PropertyInput): Promise<Property> {
         try {
-            // Ma'lumotlar bazasida yangi property yaratamiz
             const result = await this.propertyModel.create(input);
-            
-            // Property yaratilgach, agentning (member) statistikalarini yangilaymiz
             await this.memberService.memberStatsEditor({
-                _id: result.memberId as any, // result ichidagi memberId ni ishlatamiz
-                targetKey: 'memberProperties', // agentning propertylar sonini oshiramiz
-                modifier: 1, // 1 taga ko'paytirsin
+                _id: result.memberId as any,
+                targetKey: 'memberProperties',
+                modifier: 1,
             });
-            
-            return result; // Yaratilgan propertyni qaytaramiz
+            return result;
         } catch (err) {
-            console.log('Error, ', err.message);
+            console.log('Error, Service.model:', err.message);
             throw new BadRequestException(Message.CREATE_FAILED);
         }
     }
 
-    /** BITTA PROPERTYNI OLISH (VIEW REKORD BILAN) **/
-    public async getProperty(memberId: Types.ObjectId | null, propertyId: Types.ObjectId): Promise<Property> {
-        // Qidiruv ob'ektini shakllantiramiz
-        const search: Record<string, any> = {
+    public async getProperty(memberId: ObjectId | null, propertyId: ObjectId): Promise<Property> {
+        const search: T = {
             _id: propertyId,
-            propertyStatus: PropertyStatus.ACTIVE, // Faqat aktiv propertylarni ko'rish mumkin
+            propertyStatus: PropertyStatus.ACTIVE,
         };
 
-        // Bazadan izlaymiz va lean() orqali tezroq (readonly) formatda olamiz
         const targetProperty: Property | null = await this.propertyModel.findOne(search).lean().exec();
-        
-        // Agar property topilmasa xato qaytaramiz
         if (!targetProperty) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-        // Agar foydalanuvchi login qilgan bo'lsa (memberId bo'lsa), ko'rishlar sonini hisoblaymiz
         if (memberId) {
-            const viewInput: ViewInput = { 
-                memberId: memberId as any, 
-                viewRefId: propertyId as any, 
-                viewGroup: ViewGroup.PROPERTY 
-            };
-            
-            // ViewService orqali ko'rilganini rekord qilamiz
+            // Authenticate bo'lgan member murojat qilganda
+            const viewInput: ViewInput = { memberId: memberId as any, viewRefId: propertyId as any, viewGroup: ViewGroup.PROPERTY };
             const newView = await this.viewService.recordView(viewInput);
 
-            // Agar bu yangi ko'rish bo'lsa (birinchi marta), statistika oshiriladi
             if (newView) {
                 await this.propertyStatsEditor({ _id: propertyId as any, targetKey: 'propertyViews', modifier: 1 });
                 targetProperty.propertyViews++;
             }
+
+            // meLiked
+            const likeInput: LikeInput = { memberId: memberId as any, likeRefId: propertyId as any, likeGroup: LikeGroup.PROPERTY };
+            targetProperty.meLiked = await this.likeService.checkLikeExistence(likeInput);
         }
 
-        // Property egasi (agent) haqidagi ma'lumotlarni aggregation qilmasdan, service orqali ulaymiz
-        (targetProperty as any).memberData = await this.memberService.getMember(
-            memberId as any, 
-            new Types.ObjectId(targetProperty.memberId as any)
-        );
-
+        targetProperty.memberData = await this.memberService.getMember(null as any, targetProperty.memberId as any);
         return targetProperty;
     }
 
-    /** PROPERTY STATISTIKALARINI TAHRIRLASH (LIKES, VIEWS) **/
-    public async propertyStatsEditor(input: StatisticModifier): Promise<Property> {
-        const { _id, targetKey, modifier } = input;
-        
-        // Berilgan ID bo'yicha targetKey (masalan propertyViews) qiymatini modifier miqdoriga o'zgartiradi
-        return (await this.propertyModel
-            .findByIdAndUpdate(_id, { $inc: { [targetKey]: modifier } }, { new: true })
-            .exec()) as unknown as Property;
-    }
-
-    /** PROPERTYNI YANGILASH (AGENT TOMONIDAN) **/
-    public async updateProperty(memberId: Types.ObjectId, input: PropertyUpdate): Promise<Property> {
+    public async updateProperty(memberId: ObjectId, input: PropertyUpdate): Promise<Property> {
         let { propertyStatus, soldAt, deletedAt } = input;
+        console.log('propertyStatus:', propertyStatus);
+        console.log('soldAt:', soldAt);
+        console.log('deletedAt:', deletedAt);
 
-        // Faqat o'ziga tegishli va ACTIV bo'lgan propertyni update qilish sharti
         const search: T = {
-            _id: input._id,
-            memberId: memberId,
-            propertyStatus: PropertyStatus.ACTIVE,
+            // serching object hosil qilindi
+            _id: input._id, // aynan qaysi propertyni update qilish kerakligi
+            memberId: memberId, // agent mizni propertysi bo'lishi shart, agent o'zini propetysini yangilay olishi shart
+            propertyStatus: PropertyStatus.ACTIVE, // faqat ACTIV holatdagi propertylarni agentlar update qila oladi
         };
 
-        // Agar status o'zgarsa, vaqtlarini belgilaymiz
+        // if (propertyStatus === PropertyStatus.SOLD) soldAt = moment().toDate();  // savdo vaqti ro'yxatga olinyapti
+        // else if (propertyStatus === PropertyStatus.DELETE) deletedAt = moment().toDate();  // o'chirilayotgan vaqti
+
         if (propertyStatus === PropertyStatus.SOLD) soldAt = new Date();
         else if (propertyStatus === PropertyStatus.DELETE) deletedAt = new Date();
 
-        // Bazada yangilashni amalga oshiramiz
-        const result = await this.propertyModel.findOneAndUpdate(search, input, { new: true }).exec();
-        
-        // Agar natija bo'lmasa (masalan unga tegishli bo'lmasa), xato qaytaramiz
+        const result = await this.propertyModel.findOneAndUpdate(search, input, { new: true }).exec(); // updateni standart holatda amalga oshiryapmiz
         if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);
 
-        // Agar sotilsa yoki o'chirilsa, agentning aktiv propertylar sonini 1 taga kamaytiramiz
         if (soldAt || deletedAt) {
+            // qachonki status o'zgarsa agentni memberProperties soni 1 ga kamayadi
             await this.memberService.memberStatsEditor({
                 _id: memberId as any,
                 targetKey: 'memberProperties',
@@ -130,20 +115,15 @@ export class PropertyService {
         return result;
     }
 
-    /** BARCHA PROPERTYLARNI FILTRLAR BILAN OLISH (CLIENT UCHUN) **/
-    public async getProperties(memberId: Types.ObjectId, input: PropertiesInquiry): Promise<Properties> {
+    public async getProperties(memberId: ObjectId, input: PropertiesInquiry): Promise<Properties> {
         const { page, limit, sort, direction, search } = input;
 
-        // Faqat aktiv propertylar ko'rinadi
-        const match: T = { propertyStatus: PropertyStatus.ACTIVE };
-        
-        // Sortlash mantiqi (agar berilmasa createdAt bo'yicha DESC)
+        const match: T = { propertyStatus: PropertyStatus.ACTIVE }; // faqta ACTIV propertylarni ko'rish huquqiga ega bo'ladi
         const sortFinal: T = { [sort ?? 'createdAt']: direction ?? Direction.DESC };
 
-        // Filtrlarni match ob'ektiga yuklaymiz
-        this.shapeMatchQuery(match, search);
+        this.shapeMatchQuery(match, search); // OOP match referance bitta shuning uchun return qabul qilishimiz shart emas
+        console.log('match:', match);
 
-        // Murakkab so'rovni Aggregation orqali bajaramiz
         const result = await this.propertyModel
             .aggregate([
                 { $match: match },
@@ -151,27 +131,27 @@ export class PropertyService {
                 {
                     $facet: {
                         list: [
-                            { $skip: (page - 1) * limit }, // Sahifalash
-                            { $limit: limit }, // Limit
-                            lookupAuthMemberLiked(memberId as any), // User yoqtirganmi yoki yo'q
-                            lookupMember, // Agent ma'lumotlarini ulash
-                            { $unwind: '$memberData' }, // Arrayni ob'ektga aylantirish
+                            { $skip: (page - 1) * limit },
+                             { $limit: limit },
+                            lookupAuthMemberLiked(memberId),
+                            lookupMember, // config.ts da logic yozilgan
+                            { $unwind: '$memberData' }, // array ichidagi malumotni memberData ga to'g'rilab berayapti
                         ],
-                        metaCounter: [{ $count: 'total' }], // Umumiy sonini hisoblash
+
+                        metaCounter: [{ $count: 'total' }],
                     },
                 },
             ])
             .exec();
-
-        if (!result || !result[0]) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+        if (!result) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
         return result[0];
     }
 
-    /** QIDIRUV SHARTLARINI SHAKLLANTIRISH (PRIVATE HELPER) **/
     private shapeMatchQuery(match: T, search: PISearch): void {
+        // input asosida matchni qiymatlarini shakllantirib olyapmiz
         const {
-            memberId,
+            memberId, // distarction qilyapmiz: inputni ichidan quyidagi malumotlarni qabul qilyapmiz
             locationList,
             typeList,
             roomsList,
@@ -183,45 +163,45 @@ export class PropertyService {
             text,
         } = search;
 
-        // Agar aniq bir agentning propertylari so'ralsa
-        if (memberId) match.memberId = shapeIntoMongoObjectId(memberId);
-        
-        // Ro'yxat asosida filtrlar ($in operatori)
+        if (memberId) match.memberId = shapeIntoMongoObjectId(memberId); // memberId mavjud bo'lsa matchga memberId ni yuklayapmiz, ayni agentimizni propertylarini olib beradi
         if (locationList && locationList.length) match.propertyLocation = { $in: locationList };
+        // aynan locationlistlarni olib beradi arrayda
         if (roomsList && roomsList.length) match.propertyRooms = { $in: roomsList };
         if (bedsList && bedsList.length) match.propertyBeds = { $in: bedsList };
         if (typeList && typeList.length) match.propertyType = { $in: typeList };
 
-        // Diapazonli filtrlar ($gte - dan katta, $lte - gacha)
         if (pricesRange) match.propertyPrice = { $gte: pricesRange.start, $lte: pricesRange.end };
+        // $gte: katta yoki teng, $lte: kichik yoki teng
         if (periodsRange) match.constructedAt = { $gte: periodsRange.start, $lte: periodsRange.end };
         if (squaresRange) match.propertySquare = { $gte: squaresRange.start, $lte: squaresRange.end };
 
-        // Matnli qidiruv (regex orqali, case-insensitive)
-        if (text) match.propertyTitle = { $regex: text, $options: 'i' };
-        
-        // Qo'shimcha optionlar (masalan barter, rent)
+        if (text) match.propertyTitle = { $regex: text, $options: 'i' }; // regular expression orqali searching ni amalga oshiryapmiz
         if (options) {
             match['$or'] = options.map((ele) => {
-                return { [ele]: true };
+                // qaytarilagn qiymatni 'Or' bilan olyapmiz
+                return { [ele]: true }; // ele - qiymat
             });
         }
     }
 
-    /** AGENTNING O'ZIGA TEGISHLI PROPERTYLARNI OLISH **/
-    public async getAgentProperties(memberId: Types.ObjectId, input: AgentPropertiesInquiry): Promise<Properties> {
-        const { page, limit, sort, direction, search } = input;
-        const { propertyStatus } = search;
+    public async getFavorites(memberId: ObjectId, input: OrdinaryInquiry): Promise<Properties> {
+        return await this.likeService.getFavoriteProperties(memberId, input);
+    }
 
-        // O'chirilganlarni ko'rishga ruxsat yo'q
+    public async getVisited(memberId: ObjectId, input: OrdinaryInquiry): Promise<Properties> {
+        return await this.viewService.getVisitedProperties(memberId, input);
+    }
+
+    public async getAgentProperties(memberId: ObjectId, input: AgentPropertiesInquiry): Promise<Properties> {
+        const { page, limit, sort, direction, search } = input;
+
+        const { propertyStatus } = search;
         if (propertyStatus === PropertyStatus.DELETE) throw new BadRequestException(Message.NOT_ALLOWED_REQUEST);
 
-        // Agent ID va status bo'yicha filtr
         const match: T = {
             memberId: memberId,
-            propertyStatus: propertyStatus ?? { $ne: PropertyStatus.DELETE },
+            propertyStatus: propertyStatus ?? { $ne: PropertyStatus.DELETE }, // DELETE ga teng bo'lmasligi kerak
         };
-        
         const sortFinal = { [sort ?? 'createdAt']: direction ?? Direction.DESC };
 
         const result = await this.propertyModel
@@ -230,103 +210,128 @@ export class PropertyService {
                 { $sort: sortFinal },
                 {
                     $facet: {
-                        list: [
-                            { $skip: (page - 1) * limit }, // To'g'ri pagination: (page-1)*limit
-                            { $limit: limit },
-                            lookupMember, // Agent o'zi haqidagi ma'lumotlar
-                            { $unwind: '$memberData' }
-                        ],
+                        list: [{ $skip: (page - 1) * limit }, { $limit: limit }, lookupMember, { $unwind: '$memberData' }],
                         metaCounter: [{ $count: 'total' }],
                     },
                 },
             ])
             .exec();
-
-        if (!result || !result[0]) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+        if (!result) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
         return result[0];
     }
-	/** ADMIN */
-	public async getAllPropertiesByAdmin(input: AllPropertiesInquiry): Promise<Properties> {
-		const { page, limit, sort, direction, search } = input;
-		const { propertyStatus, propertyLocationList } = search;
 
-		const match: T = {}; // match objectni hosil qildik
-		const sortFinal = { [sort ?? 'createdAt']: direction ?? Direction.DESC };
-		// kiritilmagan bo'lsa default qiymatlarini ko'rsatyapmiz
+    public async likeTargetProperty(memberId: ObjectId, likeRefId: ObjectId): Promise<Property> {
+        const target: Property | null = await this.propertyModel
+            .findOne({ _id: likeRefId, propertyStatus: PropertyStatus.ACTIVE })
+            .exec();
+        if (!target) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-		if (propertyStatus) match.propertyStatus = propertyStatus;
-		if (propertyLocationList) match.propertyLocation = { $in: propertyLocationList };
-		// LocationList izlash mantig'ini matchni iciga yuklayapmiz
+        const input: LikeInput = {
+            memberId: memberId as any,
+            likeRefId: likeRefId as any,
+            likeGroup: LikeGroup.PROPERTY,
+        };
 
-		const result = await this.propertyModel
-			.aggregate([
-				// aggregate static methodini chaqirib unga [] ni argument sifatida path bo'ladi
-				{ $match: match }, // bitta pipelineda match  qilinyapti
-				{ $sort: sortFinal }, // bitta pipelineda sort qilinyapti
-				{
-					$facet: {
-						// faced orqali alohida 2 ta pipeline hosil qildik
-						list: [
-							// listda pagination qonuniyatini hosil qildik
-							{ $skip: (input.page - 1) * input.limit }, // qatorlarni o'tkazib yuborish
-							{ $limit: input.limit }, // faqat kerkali miqdordagi qatorni olib beradi
-							lookupMember, // [memberData] ni olib beradi
-							{ $unwind: '$memberData' }, // bu [memberData] => arrayni tushirib memberData ni olib beradi
-						],
-						metaCounter: [{ $count: 'total' }],
-						// pagination ni hosil qilyapmiz
-					},
-				},
-			])
-			.exec();
-		if (!result) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+        const modifier = await this.likeService.toggleLike(input);
+        const result = await this.propertyStatsEditor({
+            // propertyni static datasi yangilanadi
+            _id: likeRefId as any,
+            targetKey: 'propertyLikes',
+            modifier: modifier,
+        });
+        if (!result) throw new InternalServerErrorException(Message.SOMETHING_WENT_WRONG);
 
-		return result[0];
-	}
+        return result;
+    }
 
-	public async updatePropertyByAdmin(input: PropertyUpdate): Promise<Property> {
-		let { propertyStatus, soldAt, deletedAt } = input;
-		const search: T = {
-			_id: input._id,
-			propertyStatus: PropertyStatus.ACTIVE, // AMIN faqat ACTIVE propertylarni o'zgartirishi mumkin
-		};
+    /** ADMIN */
+    public async getAllPropertiesByAdmin(input: AllPropertiesInquiry): Promise<Properties> {
+        const { page, limit, sort, direction, search } = input;
+        const { propertyStatus, propertyLocationList } = search;
 
-		if (propertyStatus === PropertyStatus.SOLD) input.soldAt = moment().toDate();
-		// o'zgartirmoqwchi bo'lgan propetryimiz statusi SOLD bo'lsa uni vaqtini belgilayapmiz
-		else if (propertyStatus === PropertyStatus.DELETE) input.deletedAt = moment().toDate();
-		// propetryimiz statusi DELETE bo'lsa uni o'chirilgan vaqtini belgilayapmiz
+        const match: T = {}; // match objectni hosil qildik
+        const sortFinal = { [sort ?? 'createdAt']: direction ?? Direction.DESC };
+        // kiritilmagan bo'lsa default qiymatlarini ko'rsatyapmiz
 
-		const result = await this.propertyModel
-			.findOneAndUpdate(
-				search, // yuqoridagi search objecti
-				input, // o'zgarayotgan qiymatlar ketma ketigi
-				{ new: true }, // o'zgargan qiymat
-			)
-			.exec();
+        if (propertyStatus) match.propertyStatus = propertyStatus;
+        if (propertyLocationList) match.propertyLocation = { $in: propertyLocationList };
+        // LocationList izlash mantig'ini matchni iciga yuklayapmiz
 
-		if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);
+        const result = await this.propertyModel
+            .aggregate([
+                // aggregate static methodini chaqirib unga [] ni argument sifatida path bo'ladi
+                { $match: match }, // bitta pipelineda match  qilinyapti
+                { $sort: sortFinal }, // bitta pipelineda sort qilinyapti
+                {
+                    $facet: {
+                        // faced orqali alohida 2 ta pipeline hosil qildik
+                        list: [
+                            // listda pagination qonuniyatini hosil qildik
+                            { $skip: (page - 1) * limit }, // qatorlarni o'tkazib yuborish
+                            { $limit: limit }, // faqat kerkali miqdordagi qatorni olib beradi
+                            lookupMember, // [memberData] ni olib beradi
+                            { $unwind: '$memberData' }, // bu [memberData] => arrayni tushirib memberData ni olib beradi
+                        ],
+                        metaCounter: [{ $count: 'total' }],
+                        // pagination ni hosil qilyapmiz
+                    },
+                },
+            ])
+            .exec();
+        if (!result) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-		if (soldAt || deletedAt) {
-			// agar admin soldAt yoki deletedAt qilgan bo'lsa
-			await this.memberService.memberStatsEditor({
-           _id: result.memberId as any, // propertyimizni egasini
-				targetKey: 'memberProperties', // memberProperties sonini
-				modifier: -1, // -1 ga kamaytiramiz
-			});
-		}
+        return result[0];
+    }
 
-		return result;
-	}
+    public async updatePropertyByAdmin(input: PropertyUpdate): Promise<Property> {
+        let { propertyStatus, soldAt, deletedAt } = input;
+        const search: T = {
+            _id: input._id,
+            propertyStatus: PropertyStatus.ACTIVE, // AMIN faqat ACTIVE propertylarni o'zgartirishi mumkin
+        };
 
-	public async removePropertyByAdmin(propertyId: ObjectId): Promise<Property> {
-		const search: T = { _id: propertyId, propertyStatus: PropertyStatus.DELETE };
-		// {biz o'chirmoqchi bo'lgan propertyIDsi, faqat statusi DELETE bo'lgan propertyni o'chira olamiz}
-		const result = await this.propertyModel.findOneAndDelete(search).exec();
-		if (!result) throw new InternalServerErrorException(Message.REMOVE_FAILED);
-		// agar o'chirilmagan bo'lsa shu mantiq ishga tushadi
+        if (propertyStatus === PropertyStatus.SOLD) input.soldAt = moment().toDate();
+        // o'zgartirmoqwchi bo'lgan propetryimiz statusi SOLD bo'lsa uni vaqtini belgilayapmiz
+        else if (propertyStatus === PropertyStatus.DELETE) input.deletedAt = moment().toDate();
+        // propetryimiz statusi DELETE bo'lsa uni o'chirilgan vaqtini belgilayapmiz
 
-		return result;
-	}
+        const result = await this.propertyModel
+            .findOneAndUpdate(
+                search, // yuqoridagi search objecti
+                input, // o'zgarayotgan qiymatlar ketma ketigi
+                { new: true }, // o'zgargan qiymat
+            )
+            .exec();
 
+        if (!result) throw new InternalServerErrorException(Message.UPDATE_FAILED);
+
+        if (soldAt || deletedAt) {
+            // agar admin soldAt yoki deletedAt qilgan bo'lsa
+            await this.memberService.memberStatsEditor({
+                _id: result.memberId as any, // propertyimizni egasini
+                targetKey: 'memberProperties', // memberProperties sonini
+                modifier: -1, // -1 ga kamaytiramiz
+            });
+        }
+
+        return result;
+    }
+
+    public async removePropertyByAdmin(propertyId: ObjectId): Promise<Property> {
+        const search: T = { _id: propertyId, propertyStatus: PropertyStatus.DELETE };
+        // {biz o'chirmoqchi bo'lgan propertyIDsi, faqat statusi DELETE bo'lgan propertyni o'chira olamiz}
+        const result = await this.propertyModel.findOneAndDelete(search).exec();
+        if (!result) throw new InternalServerErrorException(Message.REMOVE_FAILED);
+        // agar o'chirilmagan bo'lsa shu mantiq ishga tushadi
+
+        return result;
+    }
+
+    public async propertyStatsEditor(input: StatisticModifier): Promise<Property> {
+        const { _id, targetKey, modifier } = input;
+        return (await this.propertyModel
+            .findByIdAndUpdate({ _id }, { $inc: { [targetKey]: modifier } }, { new: true })
+            .exec()) as unknown as Property;
+    }
 }
