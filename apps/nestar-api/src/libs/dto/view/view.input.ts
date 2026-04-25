@@ -1,14 +1,13 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { IsNotEmpty, IsOptional, Length } from 'class-validator';
-import { MemberAuthType, MemberType } from '../../enums/member.enum';
+import { ObjectId } from 'mongoose';
 import { ViewGroup } from '../../enums/view.enum';
-import { ObjectId } from 'bson';
+import { IsNotEmpty } from 'class-validator';
 
 @InputType()
 export class ViewInput {
 	@IsNotEmpty()
 	@Field(() => ViewGroup)
-	viewGroup: string;
+	viewGroup: ViewGroup;
 
 	@IsNotEmpty()
 	@Field(() => String)

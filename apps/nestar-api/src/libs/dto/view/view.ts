@@ -1,14 +1,11 @@
-//Backenddan Frontenga jo'natiladigan DTO'ni hosil qilamiz
-
-import { Field, Int, ObjectType } from '@nestjs/graphql';
-import { ObjectId } from 'bson';
+import { Field, ObjectType } from '@nestjs/graphql';
+import { ObjectId } from 'mongoose';
 import { ViewGroup } from '../../enums/view.enum';
-import { Types } from 'mongoose';
 
 @ObjectType()
 export class View {
 	@Field(() => String)
-	_id: Types.ObjectId;
+	_id: ObjectId;
 
 	@Field(() => ViewGroup)
 	viewGroup: ViewGroup;

@@ -8,31 +8,34 @@ import { AppResolver } from './app.resolver';
 import { ComponentsModule } from './components/components.module';
 import { DatabaseModule } from './database/database.module';
 import { T } from './libs/types/common';
+import { SocketModule } from './socket/socket.module';
 
 @Module({
-	//shu class ichida loyiha qismlarini ro‘yxatdan o‘tkazaman
 	imports: [
-		ConfigModule.forRoot(), // nestar-api server da .env ni o'qishga imkon yaratadi //forRoot()=>Modulni boshlang‘ich sozlama bilan ishga tushir
+		ConfigModule.forRoot(),
 		GraphQLModule.forRoot({
-			//Bu GraphQL modulini NestJS ichiga ulayapti.
-			driver: ApolloDriver, //Bu yerda GraphQL qaysi engine/driver bilan ishlashini aytyapti.
-			playground: true, //test qiladigan maxsus sahifa.
+			driver: ApolloDriver,
+			playground: true,
 			uploads: false,
-			autoSchemaFile: true, //“Schema faylni NestJS o‘zi avtomatik generatsiya qilsin”
+			autoSchemaFile: true,
 			formatError: (error: T) => {
-				const graphQLFormattedError = {
+				// graphQl da ixtiyoriy errorni olib beradi
+				// console.log('error:', error);
+				const graphqlFormattedError = {
+					// errorni bir standartga keltirdik
 					code: error?.extensions.code,
-					message:
-						error?.extensions?.exception?.response?.message || error?.extensions?.response?.message || error?.message,
+					message: error?.extensions?.response?.message || error?.extensions?.response?.message || error?.message,
 				};
-				console.log('GRAPHQL GLOBAL ERR:', graphQLFormattedError);
-				return graphQLFormattedError;
+
+				console.log('GraphQL global Error:', graphqlFormattedError);
+				return graphqlFormattedError;
 			},
 		}),
-		ComponentsModule, //HTTP
-		DatabaseModule, //TCP
+		ComponentsModule, // HTTP
+		DatabaseModule, // TCP
+		SocketModule,
 	],
-	controllers: [AppController],
-	providers: [AppService, AppResolver],
+	controllers: [AppController], // bu server Rest Api sifatiada run bo'lyapti
+	providers: [AppService, AppResolver], // graphQL sifatida ham run bo'lyapti
 })
 export class AppModule {}

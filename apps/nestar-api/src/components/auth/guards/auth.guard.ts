@@ -9,8 +9,6 @@ export class AuthGuard implements CanActivate {
 	async canActivate(context: ExecutionContext | any): Promise<boolean> {
 		console.info('--- @guard() Authentication [AuthGuard] ---');
 
-		console.log('____CONTExt____', context);
-
 		if (context.contextType === 'graphql') {
 			const request = context.getArgByIndex(2).req;
 
@@ -20,15 +18,13 @@ export class AuthGuard implements CanActivate {
 			const token = bearerToken.split(' ')[1],
 				authMember = await this.authService.verifyToken(token);
 			if (!authMember) throw new UnauthorizedException(Message.NOT_AUTHENTICATED);
-			// console.log("authmember", authMember);
 
 			console.log('memberNick[auth] =>', authMember.memberNick);
 			request.body.authMember = authMember;
 
 			return true;
 		}
-		return false;
-
+		return false; // repair
 		// description => http, rpc, gprs and etc are ignored
 	}
 }

@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose';
-import { MemberAuthType, MemberStatus, MemberType } from '../libs/enums/member.enum';
+import { MemberType, MemberStatus, MemberAuthType } from '../libs/enums/member.enum';
 
 const MemberSchema = new Schema(
 	{
@@ -35,7 +35,7 @@ const MemberSchema = new Schema(
 
 		memberPassword: {
 			type: String,
-			select: false,
+			select: false,  // maxfiy malumotligi sabali by default uni qiymatini olib bermasin
 			required: true,
 		},
 
@@ -96,12 +96,12 @@ const MemberSchema = new Schema(
 			default: 0,
 		},
 
-		memberRank: {
+		memberRank: {  // a'zolik darajasi
 			type: Number,
 			default: 0,
 		},
 
-		memberWarnings: {
+		memberWarnings: { // a'zolar haqida ogohlantirish
 			type: Number,
 			default: 0,
 		},

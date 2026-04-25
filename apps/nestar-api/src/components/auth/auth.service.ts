@@ -1,41 +1,36 @@
 import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { Member } from '../../libs/dto/member/member';
+import { JwtService } from '@nestjs/jwt';
 import { T } from '../../libs/types/common';
 import { shapeIntoMongoObjectId } from '../../libs/config';
 
 @Injectable()
 export class AuthService {
 	constructor(private jwtService: JwtService) {}
-
 	public async hashPassword(memberPassword: string): Promise<string> {
 		const salt = await bcrypt.genSalt();
+
 		return await bcrypt.hash(memberPassword, salt);
 	}
-	public async comparePasswords(password: string, hashedPassword: string): Promise<boolean> {
-		return await bcrypt.compare(password, hashedPassword);
+	public async comparePassword(password: string, hashedPassword: string | undefined): Promise<boolean> {
+		return bcrypt.compare(password, hashedPassword);
 	}
-
-	//Tokenni hosil qilib beradi, payloadni ichiga memberning ma'lumotlarini joylaydi, lekin passwordni tashlab ketadi
 	public async createToken(member: Member): Promise<string> {
-		console.log('member', member);
-		const payload: T = {};
+        console.log('member:', member);
+        
+		const playload: T = {};
+
 		Object.keys(member['_doc'] ? member['_doc'] : member).map((ele) => {
-			payload[`${ele}`] = member[`${ele}`];
+			playload[`${ele}`] = member[`${ele}`];
 		});
-		delete payload.memberPassword;
-		console.log('payload', payload);
+		delete playload.memberPassword;
 
-		return await this.jwtService.signAsync(payload);
+		return await this.jwtService.signAsync(playload);
 	}
-
-//decode qilib beradi, tekshiradi
 	public async verifyToken(token: string): Promise<Member> {
 		const member = await this.jwtService.verifyAsync(token);
-
-//JWT string beradi → MongoDB ObjectId kutadi → convert qilish kerak
-		member._id = shapeIntoMongoObjectId(member._id);
+        member._id = shapeIntoMongoObjectId(member._id)
 		return member;
 	}
 }

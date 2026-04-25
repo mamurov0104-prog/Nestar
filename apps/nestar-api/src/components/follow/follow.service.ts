@@ -1,203 +1,144 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Follower, Followers, Following, Followings } from '../../libs/dto/follow/follow';
-import { Model } from 'mongoose';
-// MUHIM: 'import type' ishlatish TS1272 xatosini oldini oladi
-import type { ObjectId } from 'mongoose'; 
+import { Model, ObjectId } from 'mongoose';
 import { MemberService } from '../member/member.service';
 import { Direction, Message } from '../../libs/enums/common.enum';
 import { FollowInquiry } from '../../libs/dto/follow/follow.input';
 import { T } from '../../libs/types/common';
 import {
-    lookupAuthMemberFollowed,
-    lookupAuthMemberLiked,
-    lookupFollowerData,
-    lookupFollowingData,
+	lookupAuthMemberFollowed,
+	lookupAuthMemberLiked,
+	lookupFollowerData,
+	lookupFollowingData,
 } from '../../libs/config';
 
 @Injectable()
 export class FollowService {
-    constructor(
-        // 'Follow' kolleksiyasini model sifatida ulaymiz
-        @InjectModel('Follow') private readonly followModel: Model<Follower | Following>,
-        private readonly memberService: MemberService,
-    ) {}
+	constructor(
+		@InjectModel('Follow') private readonly followModel: Model<Follower | Following>,
+		private readonly memberService: MemberService,
+	) {}
 
-    /**
-     * =========================================================================================
-     * SUBSCRIBE - AG'OLIKNI AMALGA OSHIRISH (FOLLOW QILISH)
-     * =========================================================================================
-     */
-    public async subscribe(followerId: ObjectId, followingId: ObjectId): Promise<Follower> {
-        // 1. O'ziga o'zi obuna bo'lishni tekshirish
-        if (followerId.toString() === followingId.toString()) {
-            throw new InternalServerErrorException(Message.SELF_SUBSCRIPTION_DENIED);
-        }
+	public async subscribe(followerId: ObjectId, followingId: ObjectId): Promise<Follower> {
+		if (followerId.toString() === followingId.toString()) {
+			// har ikkla objectID ni stringga o'tkazib solishtiryapmiz,
+			// referencelari boshqa bo'lganligi uchun to'g'ridan to'g'ri qiymatlarini solishtira olmaymiz
+			throw new InternalServerErrorException(Message.SELF_SUBSCRIPTION_DENIED);
+		}
 
-        // 2. Obuna bo'linayotgan user (followingId) haqiqatda borligini tekshirish
-        // 'null as any' - TS2345 (null is not assignable to ObjectId) xatosini tuzatadi
-        const targetMember = await this.memberService.getMember(null as any, followingId as any);
-        if (!targetMember) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+		const targetMember = await this.memberService.getMember(null as any, followingId);
+		// detail pageda emasligi uchun birinchi murojatchimiz null bo'ladui
+		if (!targetMember) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-        // 3. Obunani bazada ro'yxatga olish
-        const result = await this.registerSubscription(followerId, followingId);
+		const result = await this.registerSubscription(followerId, followingId); // ro'yhatga olish
 
-        /**
-         * 4. STATISTIKANI YANGILASH:
-         * memberStatsEditor ichidagi '_id: followerId as any' - TS2740 xatosini tuzatish uchun.
-         */
-        
-        // Obuna bo'gan odamning "Followings" (kimlarni kuzatyapti) sonini +1 qilamiz
-        await this.memberService.memberStatsEditor({ 
-            _id: followerId as any, 
-            targetKey: 'memberFollowings', 
-            modifier: 1 
-        });
+		await this.memberService.memberStatsEditor({ _id: followerId, targetKey: 'memberFollowings', modifier: 1 });
+		await this.memberService.memberStatsEditor({ _id: followingId, targetKey: 'memberFollowers', modifier: 1 });
 
-        // Obuna bo'lingan (target) odamning "Followers" (kuzatuvchilari) sonini +1 qilamiz
-        await this.memberService.memberStatsEditor({ 
-            _id: followingId as any, 
-            targetKey: 'memberFollowers', 
-            modifier: 1 
-        });
+		return result;
+	}
 
-        return result;
-    }
+	private async registerSubscription(followerId: ObjectId, followingId: ObjectId): Promise<Follower> {
+		try {
+			return await this.followModel.create({
+				followingId: followingId,
+				followerId: followerId,
+			});
+		} catch (err) {
+			console.log('Error, Service.model', err);
+			throw new BadRequestException(Message.CREATE_FAILED);
+		}
+	}
 
-    /**
-     * BAZAGA YANGI FOLLOW HUJJATINI YOZISH
-     */
-    private async registerSubscription(followerId: ObjectId, followingId: ObjectId): Promise<Follower> {
-        try {
-            return await this.followModel.create({
-                followingId: followingId,
-                followerId: followerId,
-            });
-        } catch (err) {
-            console.log('Error, Service.registerSubscription:', err);
-            throw new BadRequestException(Message.CREATE_FAILED);
-        }
-    }
+	public async unsubscribe(followerId: ObjectId, followingId: ObjectId): Promise<Follower> {
+		const targetMember = await this.memberService.getMember(null as any , followingId);
+		if (!targetMember) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-    /**
-     * =========================================================================================
-     * UNSUBSCRIBE - OBUNADAN CHIQISH
-     * =========================================================================================
-     */
-    public async unsubscribe(followerId: ObjectId, followingId: ObjectId): Promise<Follower> {
-        // 1. Obunadan chiqilayotgan user mavjudligini tekshirish
-        // 'null as any' orqali argument tipi bilan bog'liq xato tuzatildi
-        const targetMember = await this.memberService.getMember(null as any, followingId as any);
-        if (!targetMember) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+		const result = await this.followModel.findOneAndDelete({
+			followingId: followingId,
+			followerId: followerId,
+		}).exec();
+		if (!result) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-        // 2. Bazadan ushbu follow hujjatini qidirib o'chirish
-        const result = await this.followModel.findOneAndDelete({
-            followingId: followingId,
-            followerId: followerId,
-        }).exec();
+		await this.memberService.memberStatsEditor({ _id: followerId, targetKey: 'memberFollowings', modifier: -1 });
+		// birlik argumentni path qilyapmiz
+		await this.memberService.memberStatsEditor({ _id: followingId, targetKey: 'memberFollowers', modifier: -1 });
 
-        if (!result) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+		return result;
+	}
 
-        // 3. STATISTIKANI KAMAYTIRISH (-1)
-        await this.memberService.memberStatsEditor({ 
-            _id: followerId as any, 
-            targetKey: 'memberFollowings', 
-            modifier: -1 
-        });
-        
-        await this.memberService.memberStatsEditor({ 
-            _id: followingId as any, 
-            targetKey: 'memberFollowers', 
-            modifier: -1 
-        });
+	public async getMemberFollowings(memberId: ObjectId | null, input: FollowInquiry): Promise<Followings> {
+		const { page, limit, search } = input;
+		if (!search?.followerId) throw new InternalServerErrorException(Message.BAD_REQUEST);
+		// agar followerId null ni tashkil etgan bo'lsa (fronteddan yuborilmagan bo'lsa), backend validationni amalga oshirdik
 
-        return result;
-    }
+		const match: T = { followerId: search?.followerId };
+		console.log('match', match);
 
-    /**
-     * =========================================================================================
-     * GET MEMBER FOLLOWINGS - MEN KIMGADIR OBUNA BO'LGANLARIM RO'YXATI
-     * =========================================================================================
-     */
-    public async getMemberFollowings(memberId: ObjectId | null, input: FollowInquiry): Promise<Followings> {
-        const { page, limit, search } = input;
-        
-        // Kiruvchi followerId bo'lishi shart
-        if (!search?.followerId) throw new InternalServerErrorException(Message.BAD_REQUEST);
+		const result = await this.followModel
+			.aggregate([
+				{ $match: match },
+				{ $sort: { created: Direction.DESC } }, // Direction Decending ko'rinishida bo'lyapti
+				{
+					$facet: {
+						// faced orqali hozirgi pipeline 2 ta mustaqil pipeline ga ajratib bir vaqtning o'zida ikkala pipelinedan foydalanish imkonini beradi
+						list: [
+							{ $skip: (page - 1) * limit },
+							{ $limit: limit },
+							lookupAuthMemberLiked(memberId, '$followingId'),
+							lookupAuthMemberFollowed({
+								followerId: memberId,
+								followingId: '$followingId',
+							}),
+							// meFollowed
+							lookupFollowingData,
+							{ $unwind: '$followingData' }, // following bo'lgan memberni to'liq malumotini olib beradi
+						],
+						metaCounter: [{ $count: 'total' }],
+					},
+				},
+			])
+			.exec();
+		if (!result) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-        const match: T = { followerId: search?.followerId };
+		return result[0];
+	}
 
-        const result = await this.followModel
-            .aggregate([
-                { $match: match },
-                { $sort: { createdAt: Direction.DESC } }, // Saralash
-                {
-                    $facet: {
-                        list: [
-                            { $skip: (page - 1) * limit },
-                            { $limit: limit },
-                            // Login qilgan user bu odamga LIKE bosganmi yoki yo'qmi?
-                            lookupAuthMemberLiked(memberId, '$followingId'),
-                            // Login qilgan user bu odamga FOLLOW qilganmi?
-                            lookupAuthMemberFollowed({
-                                followerId: memberId,
-                                followingId: '$followingId',
-                            }),
-                            // Obuna bo'lingan userning profil ma'lumotlarini (ism, rasm) olib kelish
-                            lookupFollowingData,
-                            { $unwind: '$followingData' }, 
-                        ],
-                        metaCounter: [{ $count: 'total' }],
-                    },
-                },
-            ])
-            .exec();
-            
-        if (!result || !result[0].list.length) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
+	public async getMemberFollowers(memberId: ObjectId | null, input: FollowInquiry): Promise<Followers> {
+		const { page, limit, search } = input;
+		if (!search?.followingId) throw new InternalServerErrorException(Message.BAD_REQUEST);
 
-        return result[0];
-    }
+		const match: T = { followingId: search?.followingId };
+		// followingId ni search?.followingId ga teng bo'lgandagi qiymatini matchga tenglayabmiz.
+		console.log('match', match);
 
-    /**
-     * =========================================================================================
-     * GET MEMBER FOLLOWERS - KIMLAR MENGA OBUNA BO'LGAN (KUZATUVCHILARIM)
-     * =========================================================================================
-     */
-    public async getMemberFollowers(memberId: ObjectId | null, input: FollowInquiry): Promise<Followers> {
-        const { page, limit, search } = input;
-        
-        if (!search?.followingId) throw new InternalServerErrorException(Message.BAD_REQUEST);
+		const result = await this.followModel
+			.aggregate([
+				// database server ni maydonida hosil bo'ladi
+				{ $match: match },
+				{ $sort: { created: Direction.DESC } },
+				{
+					$facet: {
+						list: [
+							{ $skip: (page - 1) * limit },
+							{ $limit: limit },
+							lookupAuthMemberLiked(memberId, '$followerId'),
+							lookupAuthMemberFollowed({
+								followerId: memberId,
+								followingId: '$followingId',
+							}),
 
-        const match: T = { followingId: search?.followingId };
+							lookupFollowerData,
+							{ $unwind: '$followerData' },
+						],
+						metaCounter: [{ $count: 'total' }],
+					},
+				},
+			])
+			.exec();
+		if (!result) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
 
-        const result = await this.followModel
-            .aggregate([
-                { $match: match },
-                { $sort: { createdAt: Direction.DESC } },
-                {
-                    $facet: {
-                        list: [
-                            { $skip: (page - 1) * limit },
-                            { $limit: limit },
-                            // Kuzatuvchilarim ichidan kimlarnidir LIKE qilganmanmi?
-                            lookupAuthMemberLiked(memberId, '$followerId'),
-                            // Kuzatuvchilarim ichidan kimlarnidir FOLLOW qilganmanmi?
-                            lookupAuthMemberFollowed({
-                                followerId: memberId,
-                                followingId: '$followerId',
-                            }),
-                            // Menga obuna bo'lgan userning profil ma'lumotlarini olib kelish
-                            lookupFollowerData,
-                            { $unwind: '$followerData' },
-                        ],
-                        metaCounter: [{ $count: 'total' }],
-                    },
-                },
-            ])
-            .exec();
-
-        if (!result || !result[0].list.length) throw new InternalServerErrorException(Message.NO_DATA_FOUND);
-
-        return result[0];
-    }
+		return result[0];
+	}
 }

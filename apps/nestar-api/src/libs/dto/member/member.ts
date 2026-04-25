@@ -1,14 +1,13 @@
-//Backenddan Frontenga jo'natiladigan DTO'ni hosil qilamiz
-
 import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { ObjectId } from 'mongoose';
 import { MemberAuthType, MemberStatus, MemberType } from '../../enums/member.enum';
-import { Types } from 'mongoose';
 import { MeLiked } from '../like/like';
 import { MeFollowed } from '../follow/follow';
-@ObjectType()
+
+@ObjectType() // backend serverdan clientga yuborilayotganda (pipe)dto larni qurish un ishlatiladigon decorator hisoblanadi
 export class Member {
 	@Field(() => String)
-	_id: Types.ObjectId;
+	_id: ObjectId; // mongodb by default "id" ni qo'yib beradi
 
 	@Field(() => MemberType)
 	memberType: MemberType;
@@ -25,7 +24,7 @@ export class Member {
 	@Field(() => String)
 	memberNick: string;
 
-	memberPassword: string;
+	memberPassword?: string; // memberPassword ni clientga yubormaslik un @Fieldga buiriktiriklmadi
 
 	@Field(() => String, { nullable: true })
 	memberFullName?: string;
@@ -73,7 +72,7 @@ export class Member {
 	memberBlocks: number;
 
 	@Field(() => Date, { nullable: true })
-	deletedAt: Date;
+	deletedAt?: Date;
 
 	@Field(() => Date)
 	createdAt: Date;
@@ -83,7 +82,10 @@ export class Member {
 
 	@Field(() => String, { nullable: true })
 	accessToken?: string;
-		@Field(() => [MeLiked], { nullable: true })
+
+	/** from aggregation */
+
+	@Field(() => [MeLiked], { nullable: true })
 	meLiked?: MeLiked[];
 
 	@Field(() => [MeFollowed], { nullable: true })
@@ -93,7 +95,7 @@ export class Member {
 @ObjectType()
 export class TotalCounter {
 	@Field(() => Int, { nullable: true })
-	total: number;
+	total?: number;
 }
 
 @ObjectType()
