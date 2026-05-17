@@ -4,7 +4,7 @@ import { AuthService } from '../auth.service';
 @Injectable()
 export class WithoutGuard implements CanActivate {
 	constructor(private authService: AuthService) {}
-
+ //@ts-ignore
 	async canActivate(context: ExecutionContext | any): Promise<boolean> {
 		console.info('--- @guard() Authentication [WithoutGuard] ---');
 
@@ -25,7 +25,7 @@ export class WithoutGuard implements CanActivate {
 			console.log('memberNick[without] =>', request.body.authMember?.memberNick ?? 'none');
 			return true;
 		}
-		return false;
+
 		// description => http, rpc, gprs and etc are ignored
 	}
 }

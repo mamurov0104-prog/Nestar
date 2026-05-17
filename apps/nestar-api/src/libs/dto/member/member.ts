@@ -4,33 +4,33 @@ import { MemberAuthType, MemberStatus, MemberType } from '../../enums/member.enu
 import { MeLiked } from '../like/like';
 import { MeFollowed } from '../follow/follow';
 
-@ObjectType() // backend serverdan clientga yuborilayotganda (pipe)dto larni qurish un ishlatiladigon decorator hisoblanadi
+@ObjectType()
 export class Member {
 	@Field(() => String)
-	_id: ObjectId; // mongodb by default "id" ni qo'yib beradi
+	_id: ObjectId | undefined;
 
 	@Field(() => MemberType)
-	memberType: MemberType;
+	memberType: MemberType | undefined;
 
 	@Field(() => MemberStatus)
-	memberStatus: MemberStatus;
+	memberStatus: MemberStatus | undefined;
 
 	@Field(() => MemberAuthType)
-	memberAuthType: MemberAuthType;
+	memberAuthType: MemberAuthType | undefined;
 
 	@Field(() => String)
-	memberPhone: string;
+	memberPhone: String | undefined;
 
 	@Field(() => String)
-	memberNick: string;
+	memberNick: String | undefined;
 
-	memberPassword?: string; // memberPassword ni clientga yubormaslik un @Fieldga buiriktiriklmadi
+	memberPassword?: string;
 
 	@Field(() => String, { nullable: true })
 	memberFullName?: string;
 
 	@Field(() => String)
-	memberImage: string;
+	memberImage?: string;
 
 	@Field(() => String, { nullable: true })
 	memberAddress?: string;
@@ -39,52 +39,51 @@ export class Member {
 	memberDesc?: string;
 
 	@Field(() => Int)
-	memberProperties: number;
+	memberProperties?: number;
 
 	@Field(() => Int)
-	memberArticles: number;
+	memberArticles?: number;
 
 	@Field(() => Int)
-	memberFollowers: number;
+	memberFollowers?: number;
 
 	@Field(() => Int)
-	memberFollowings: number;
+	memberFollowings?: number;
 
 	@Field(() => Int)
-	memberPoints: number;
+	memberPoints?: number;
 
 	@Field(() => Int)
-	memberLikes: number;
+	memberLikes?: number;
 
 	@Field(() => Int)
-	memberViews: number;
+	memberViews?: number;
 
 	@Field(() => Int)
-	memberComments: number;
+	memberComments?: number;
 
 	@Field(() => Int)
-	memberRank: number;
+	memberRank?: number;
 
 	@Field(() => Int)
-	memberWarnings: number;
+	memberWarnings?: number;
 
 	@Field(() => Int)
-	memberBlocks: number;
+	memberBlocks?: number;
 
 	@Field(() => Date, { nullable: true })
 	deletedAt?: Date;
 
 	@Field(() => Date)
-	createdAt: Date;
+	createdAt!: Date;
 
 	@Field(() => Date)
-	updatedAt: Date;
+	updatedAt!: Date;
 
 	@Field(() => String, { nullable: true })
 	accessToken?: string;
 
-	/** from aggregation */
-
+	// aggregation 
 	@Field(() => [MeLiked], { nullable: true })
 	meLiked?: MeLiked[];
 
@@ -101,8 +100,8 @@ export class TotalCounter {
 @ObjectType()
 export class Members {
 	@Field(() => [Member])
-	list: Member[];
+	list: Member[] | undefined;
 
 	@Field(() => [TotalCounter], { nullable: true })
-	metaCounter?: TotalCounter[];
+	metaCounter?: TotalCounter;
 }

@@ -1,11 +1,11 @@
 import { BadRequestException, CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from '../auth.service';
-import { Message } from 'apps/nestar-api/src/libs/enums/common.enum';
+import { Message } from '../../../libs/enums/common.enum';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
 	constructor(private authService: AuthService) {}
-
+ //@ts-ignore
 	async canActivate(context: ExecutionContext | any): Promise<boolean> {
 		console.info('--- @guard() Authentication [AuthGuard] ---');
 
@@ -24,7 +24,7 @@ export class AuthGuard implements CanActivate {
 
 			return true;
 		}
-		return false; // repair
+
 		// description => http, rpc, gprs and etc are ignored
 	}
 }

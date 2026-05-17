@@ -1,17 +1,14 @@
-import { Field, InputType, Int } from '@nestjs/graphql';
-import { IsInt, IsNotEmpty, IsOptional, Length, Min } from 'class-validator';
-import { PropertyLocation, PropertyStatus, PropertyType } from '../../enums/property.enum';
+import { Field, InputType, Int, ObjectType } from '@nestjs/graphql';
 import { ObjectId } from 'mongoose';
+import { PropertyLocation, PropertyStatus, PropertyType } from '../../enums/property.enum';
+import { IsIn, IsNotEmpty, IsOptional, Length, Min } from 'class-validator';
+import { availableOptions, availablePropertySort } from '../../config';
+import { Direction } from '../../enums/common.enum';
 
 @InputType()
 export class PropertyUpdate {
-	@IsNotEmpty()  // majburiy
 	@Field(() => String)
-	_id: ObjectId;
-
-	@IsOptional()  // ixtiyoriy
-	@Field(() => PropertyType, { nullable: true })
-	propertyType?: PropertyType;
+	_id: ObjectId | undefined;
 
 	@IsOptional()
 	@Field(() => PropertyStatus, { nullable: true })
@@ -27,6 +24,10 @@ export class PropertyUpdate {
 	propertyAddress?: string;
 
 	@IsOptional()
+	@Field(() => PropertyType, { nullable: true })
+	propertyType?: PropertyType;
+
+	@IsOptional()
 	@Length(3, 100)
 	@Field(() => String, { nullable: true })
 	propertyTitle?: string;
@@ -40,14 +41,10 @@ export class PropertyUpdate {
 	propertySquare?: number;
 
 	@IsOptional()
-	@IsInt()
-	@Min(1)
 	@Field(() => Int, { nullable: true })
 	propertyBeds?: number;
 
 	@IsOptional()
-	@IsInt()  // Integer bo'lmasa validation xatolik beradi
-	@Min(1)
 	@Field(() => Int, { nullable: true })
 	propertyRooms?: number;
 
@@ -56,7 +53,6 @@ export class PropertyUpdate {
 	propertyImages?: string[];
 
 	@IsOptional()
-	@Length(5, 500)
 	@Field(() => String, { nullable: true })
 	propertyDesc?: string;
 
@@ -67,13 +63,116 @@ export class PropertyUpdate {
 	@IsOptional()
 	@Field(() => Boolean, { nullable: true })
 	propertyRent?: boolean;
-    
-    // soldAt va deleteAt yordamchi mantiq, typescript un kerak, validatsiya bo'lmaydi, frontenddan kelmaydi shuningh uchun Field qilinmaydi
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	memberId?: ObjectId;
+
 	soldAt?: Date;
 
 	deletedAt?: Date;
 
 	@IsOptional()
 	@Field(() => Date, { nullable: true })
-	constructedAt?: Date;  // qachon qurilganligi
+	constructedAt?: Date;
+}
+
+@InputType()
+export class PricesRange {
+	@Field(() => Int)
+	start?: number;
+
+	@Field(() => Int)
+	end?: number;
+}
+
+@InputType()
+export class SquaresRange {
+	@Field(() => Int)
+	start?: number;
+
+	@Field(() => Int)
+	end?: number;
+}
+
+@InputType()
+export class PeriodsRange {
+	@Field(() => Date)
+	start?: Date;
+
+	@Field(() => Date)
+	end?: Date;
+}
+
+@InputType()
+class PISearch {
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	memberId?: ObjectId;
+
+	@IsOptional()
+	@Field(() => [PropertyLocation], { nullable: true })
+	locationList?: PropertyLocation[];
+
+	@IsOptional()
+	@Field(() => [PropertyType], { nullable: true })
+	typeList?: PropertyType[];
+
+	@Field(() => String, { nullable: true })
+	commentRefId?: string;
+
+	@IsOptional()
+	@Field(() => [Int], { nullable: true })
+	roomsList?: Number[];
+
+	@IsOptional()
+	@Field(() => [Int], { nullable: true })
+	bedsList?: Number[];
+
+	@IsOptional()
+	@IsIn(availableOptions, { each: true })
+	@Field(() => [String], { nullable: true })
+	options?: string[];
+
+	@IsOptional()
+	@Field(() => PricesRange, { nullable: true })
+	pricesRange?: PricesRange;
+
+	@IsOptional()
+	@Field(() => PeriodsRange, { nullable: true })
+	periodsRange?: PeriodsRange;
+
+	@IsOptional()
+	@Field(() => SquaresRange, { nullable: true })
+	squaresRange?: SquaresRange;
+
+	@IsOptional()
+	@Field(() => String, { nullable: true })
+	text?: string;
+}
+
+@InputType()
+export class PropertiesInquiry {
+	@IsNotEmpty()
+	@Min(1)
+	@Field(() => Int)
+	page: number | any;
+
+	@IsNotEmpty()
+	@Min(1)
+	@Field(() => Int)
+	limit: number | any;
+
+	@IsOptional()
+	@IsIn(availablePropertySort)
+	@Field(() => String, { nullable: true })
+	sort?: string;
+
+	@IsOptional()
+	@Field(() => Direction, { nullable: true })
+	direction?: Direction;
+
+	@IsNotEmpty()
+	@Field(() => PISearch)
+	search?: PISearch;
 }

@@ -44,11 +44,11 @@ export class BoardArticle {
 
 	/** from aggregation **/
 
-	@Field(() => Member, { nullable: true })
-	memberData?: Member;
-
 	@Field(() => [MeLiked], { nullable: true })
 	meLiked?: MeLiked[];
+	
+	@Field(() => Member, { nullable: true })
+	memberData?: Member;
 }
 
 @ObjectType()

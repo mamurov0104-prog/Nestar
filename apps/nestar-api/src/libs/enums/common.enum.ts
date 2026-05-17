@@ -22,9 +22,7 @@ export enum Message {
 }
 
 export enum Direction {
-	ASC = 1, // pastdan yuqoriga
-	DESC = -1, // yuqoridan pastga
+	ASC = 1,
+	DESC = -1,
 }
-registerEnumType(Direction, {
-	name: 'Direction',
-});
+registerEnumType(Direction, { name: 'Direction' });
