@@ -2,7 +2,8 @@ import { Field, ObjectType } from '@nestjs/graphql';
 import { LikeGroup } from '../../enums/like.enum';
 import { ObjectId } from 'mongoose';
 
-@ObjectType()
+// javob qaytarilayotfganda
+@ObjectType()  // murojatchi malum bir targetga like bosgan yoki bosmaganligini aniqlab beruvchi object type
 export class MeLiked {
 	@Field(() => String)
 	memberId: ObjectId;
@@ -14,7 +15,7 @@ export class MeLiked {
 	myFavorite: boolean;
 }
 
-@ObjectType()
+@ObjectType() // like hosil bo'lganda qanday keylar bo'ladi
 export class Like {
 	@Field(() => String)
 	_id: ObjectId;
@@ -29,10 +30,10 @@ export class Like {
 	memberId: ObjectId;
 
 	@Field(() => Date)
-	createdAt: Date;
+	createdAt: Date; // mongodb avtomatic hosil qiolib beradi
 
 	@Field(() => Date)
-	updatedAt: Date;
+	updatedAt: Date; // mongodb avtomatic hosil qiolib beradi
 }
 
 

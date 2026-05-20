@@ -1,10 +1,9 @@
-import {} from '@nestjs/common';
-import { Resolver, Query } from '@nestjs/graphql';
+import { Query, Resolver } from '@nestjs/graphql';
 
 @Resolver()
 export class AppResolver {
 	@Query(() => String)
 	public sayHello(): string {
-		return 'GraphQL';
+		return 'GraphQL API Server';
 	}
 }

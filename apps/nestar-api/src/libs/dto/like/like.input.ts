@@ -7,13 +7,13 @@ import { LikeGroup } from '../../enums/like.enum';
 export class LikeInput {
 	@IsNotEmpty()
 	@Field(() => String)
-	memberId: ObjectId;
+	memberId: ObjectId;  // like qilayotgan memberni IDsi
 
 	@IsNotEmpty()
 	@Field(() => String)
-	likeRefId: ObjectId;
+	likeRefId: ObjectId;  // like qilinayotgan target
 
 	@IsNotEmpty()
 	@Field(() => LikeGroup)
-	likeGroup: LikeGroup;
+	likeGroup: LikeGroup;  // qaysi turdagi like
 }

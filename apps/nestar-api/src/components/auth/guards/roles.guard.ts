@@ -9,7 +9,7 @@ export class RolesGuard implements CanActivate {
 		private reflector: Reflector,
 		private authService: AuthService,
 	) {}
- //@ts-ignore
+
 	async canActivate(context: ExecutionContext | any): Promise<boolean> {
 		const roles = this.reflector.get<string[]>('roles', context.getHandler());
 		if (!roles) return true;
@@ -23,7 +23,6 @@ export class RolesGuard implements CanActivate {
 
 			const token = bearerToken.split(' ')[1],
 				authMember = await this.authService.verifyToken(token),
-				// @ts-ignore
 				hasRole = () => roles.indexOf(authMember.memberType) > -1,
 				hasPermission: boolean = hasRole();
 
@@ -35,5 +34,6 @@ export class RolesGuard implements CanActivate {
 		}
 
 		// description => http, rpc, gprs and etc are ignored
+		return false;
 	}
 }

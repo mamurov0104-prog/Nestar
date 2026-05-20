@@ -9,6 +9,7 @@ import { ComponentsModule } from './components/components.module';
 import { DatabaseModule } from './database/database.module';
 import { T } from './libs/types/common';
 import { SocketModule } from './socket/socket.module';
+
 @Module({
 	imports: [
 		ConfigModule.forRoot(),
@@ -18,24 +19,23 @@ import { SocketModule } from './socket/socket.module';
 			uploads: false,
 			autoSchemaFile: true,
 			formatError: (error: T) => {
-				console.log('error:', error);
-				const graphQLformattedError = {
+				// graphQl da ixtiyoriy errorni olib beradi
+				// console.log('error:', error);
+				const graphqlFormattedError = {
+					// errorni bir standartga keltirdik
 					code: error?.extensions.code,
-					message:
-						error?.extensions?.exception?.response?.message ||
-						error?.extensions?.response?.message ||
-						error?.message ||
-						'Unknown Error',
+					message: error?.extensions?.response?.message || error?.extensions?.response?.message || error?.message,
 				};
-				console.log('GRAPHQL GLOBAL ERR:', graphQLformattedError);
-				return graphQLformattedError;
+
+				console.log('GraphQL global Error:', graphqlFormattedError);
+				return graphqlFormattedError;
 			},
 		}),
-		ComponentsModule,
-		DatabaseModule,
+		ComponentsModule, // HTTP
+		DatabaseModule, // TCP
 		SocketModule,
 	],
-	controllers: [AppController],
-	providers: [AppService, AppResolver],
+	controllers: [AppController], // bu server Rest Api sifatiada run bo'lyapti
+	providers: [AppService, AppResolver], // graphQL sifatida ham run bo'lyapti
 })
 export class AppModule {}

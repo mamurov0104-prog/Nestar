@@ -7,61 +7,61 @@ import { MeLiked } from '../like/like';
 @ObjectType()
 export class Property {
 	@Field(() => String)
-	_id: ObjectId | undefined;
-
-	@Field(() => PropertyStatus)
-	propertyStatus?: PropertyStatus;
-
-	@Field(() => PropertyLocation)
-	propertyLocation?: PropertyLocation;
-
-	@Field(() => String)
-	propertyAddress?: string;
+	_id: ObjectId;
 
 	@Field(() => PropertyType)
-	propertyType?: PropertyType;
+	propertyType: PropertyType;
+
+	@Field(() => PropertyStatus)
+	propertyStatus: PropertyStatus;
+
+	@Field(() => PropertyLocation)
+	propertyLocation: PropertyLocation;
 
 	@Field(() => String)
-	propertyTitle?: string;
+	propertyAddress: string;
+
+	@Field(() => String)
+	propertyTitle: string;
 
 	@Field(() => Number)
-	propertyPrice?: number;
+	propertyPrice: number;
 
 	@Field(() => Number)
-	propertySquare?: number;
+	propertySquare: number;
 
 	@Field(() => Int)
-	propertyBeds?: number;
+	propertyBeds: number;
 
 	@Field(() => Int)
-	propertyRooms?: number;
+	propertyRooms: number;
 
 	@Field(() => Int)
-	propertyViews: number | any;
+	propertyViews: number;
 
 	@Field(() => Int)
-	propertyLikes?: number;
+	propertyLikes: number;
 
 	@Field(() => Int)
-	propertyComments?: number;
+	propertyComments: number;
 
 	@Field(() => Int)
-	propertyRank?: number;
+	propertyRank: number;
 
 	@Field(() => [String])
-	propertyImages?: string[];
+	propertyImages: string[];
 
 	@Field(() => String, { nullable: true })
 	propertyDesc?: string;
 
 	@Field(() => Boolean)
-	propertyBarter?: boolean;
+	propertyBarter: boolean;
 
 	@Field(() => Boolean)
-	propertyRent?: boolean;
+	propertyRent: boolean;
 
 	@Field(() => String)
-	memberId?: ObjectId;
+	memberId: ObjectId;
 
 	@Field(() => Date, { nullable: true })
 	soldAt?: Date;
@@ -73,27 +73,26 @@ export class Property {
 	constructedAt?: Date;
 
 	@Field(() => Date)
-	createdAt!: Date;
+	createdAt: Date;
 
 	@Field(() => Date)
-	updatedAt!: Date;
+	updatedAt: Date;
 
-	// from aggregation
+	/** from aggregation **/
 
-	@Field(() => [MeLiked], { nullable: true })
-		meLiked?: MeLiked[];
-
+	/** from aggregation **/
 	@Field(() => Member, { nullable: true })
 	memberData?: Member;
 
-	
+	@Field(() => [MeLiked], { nullable: true })
+	meLiked?: MeLiked[];
 }
 
 @ObjectType()
 export class Properties {
 	@Field(() => [Property])
-	list?: Property[];
-
+	list: Property[];     // bir qancha propertylardan iborat
+	
 	@Field(() => [TotalCounter], {nullable: true})
-	metaCounter?: TotalCounter[];
+	metaCounter: TotalCounter[];  // serachimizga to'g'ri keladigon propertylarni sonini hisoblab beradi
 }

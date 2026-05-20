@@ -1,16 +1,18 @@
 declare module 'graphql-upload' {
-  import { ReadStream } from 'fs';
+	import { RequestHandler } from 'express';
+	import { GraphQLScalarType } from 'graphql';
+	import { Readable } from 'stream';
 
-  export interface FileUpload {
-    filename: string;
-    mimetype: string;
-    encoding: string;
-    createReadStream: () => ReadStream;
-  }
+	export const GraphQLUpload: GraphQLScalarType;
+	export const graphqlUploadExpress: (options?: {
+		maxFileSize?: number;
+		maxFiles?: number;
+	}) => RequestHandler;
 
-  export class GraphQLUpload {
-    static parseValue(value: unknown): Promise<FileUpload>;
-  }
-
-  export class FileUpload {}
+	export interface FileUpload {
+		filename: string;
+		mimetype: string;
+		encoding: string;
+		createReadStream: () => Readable;
+	}
 }

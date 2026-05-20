@@ -1,31 +1,33 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
-import { IsIn, isIn, IsNotEmpty, IsOptional, Length, Min } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, Length, Min } from 'class-validator';
 import { MemberAuthType, MemberStatus, MemberType } from '../../enums/member.enum';
 import { availableAgentsSorts, availableMembersSorts } from '../../config';
 import { Direction } from '../../enums/common.enum';
+
 @InputType()
 export class MemberInput {
-	@IsNotEmpty()
-	@Length(3, 12)
-	@Field(() => String)
-	memberNick: string | undefined;
+	@IsNotEmpty() // bo'sh bo'lmasligini ta'minlaydigon decorator
+	@Length(3, 12) // nickname ni min va max nechta bo'lishi
+	@Field(() => String) // (memberNick) qanday turda bo‘lishini belgilaydi.
+	memberNick: string;
 
 	@IsNotEmpty()
 	@Length(5, 12)
 	@Field(() => String)
-	memberPassword: string | undefined;
+	memberPassword: string;
 
 	@IsNotEmpty()
 	@Field(() => String)
-	memberPhone: string | undefined;
+	memberPhone: string;
 
-	@IsOptional()
-	@Field(() => MemberType, { nullable: true })
+	@IsOptional()  // bo'lishi ham bo'lmasligi ham mumkin
+   
+	@Field(() => MemberType, { nullable: true })  // bo'sh bo'lishi mumkin
 	memberType?: MemberType;
 
 	@IsOptional()
 	@Field(() => MemberAuthType, { nullable: true })
-	memberAuthType?: MemberAuthType;
+	memberAuthType?: MemberAuthType;  // member.enum.ts fileda ko'rsatilgan
 }
 
 @InputType()
@@ -33,17 +35,18 @@ export class LoginInput {
 	@IsNotEmpty()
 	@Length(3, 12)
 	@Field(() => String)
-	memberNick: string | undefined;
+	memberNick: string;
 
 	@IsNotEmpty()
 	@Length(5, 12)
 	@Field(() => String)
-	memberPassword: string | undefined;
+	memberPassword: string;
 }
 
+// Agent Inquiry
 @InputType()
-class AIsearch {
-	@IsNotEmpty()
+class AISearch {
+	@IsOptional()
 	@Field(() => String, { nullable: true })
 	text?: string;
 }
@@ -53,12 +56,12 @@ export class AgentsInquiry {
 	@IsNotEmpty()
 	@Min(1)
 	@Field(() => Int)
-	page: number | undefined;
+	page: number;
 
 	@IsNotEmpty()
 	@Min(1)
 	@Field(() => Int)
-	limit: number | undefined;
+	limit: number;
 
 	@IsOptional()
 	@IsIn(availableAgentsSorts)
@@ -70,20 +73,22 @@ export class AgentsInquiry {
 	direction?: Direction;
 
 	@IsNotEmpty()
-	@Field(() => AIsearch)
-	search: AIsearch | undefined;
+	@Field(() => AISearch)
+	search: AISearch;
 }
 
+//MemberInquirySearch
 @InputType()
-class MIsearch {
-    @IsOptional()
-    @Field(() => String, { nullable: true })
-    memberStatus?: MemberStatus
+class MISearch {
+	@IsOptional()
+	@Field(() => MemberStatus, { nullable: true })
+	memberStatus?: MemberStatus;
 
-    @IsOptional()
-    @Field(() => MemberType, { nullable: true })
-    memberType?: MemberType
-	@IsNotEmpty()
+	@IsOptional()
+	@Field(() => MemberType, { nullable: true })
+	memberType?: MemberType;
+
+	@IsOptional()
 	@Field(() => String, { nullable: true })
 	text?: string;
 }
@@ -93,12 +98,12 @@ export class MembersInquiry {
 	@IsNotEmpty()
 	@Min(1)
 	@Field(() => Int)
-	page: number | undefined;
+	page: number;
 
 	@IsNotEmpty()
 	@Min(1)
 	@Field(() => Int)
-	limit: number | undefined;
+	limit: number;
 
 	@IsOptional()
 	@IsIn(availableMembersSorts)
@@ -110,6 +115,7 @@ export class MembersInquiry {
 	direction?: Direction;
 
 	@IsNotEmpty()
-	@Field(() => MIsearch)
-	search: MIsearch | undefined;
+	@Field(() => MISearch)
+	search: MISearch;
 }
+

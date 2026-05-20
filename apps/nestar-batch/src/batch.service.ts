@@ -1,22 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { Member } from 'apps/nestar-api/src/libs/dto/member/member';
+import { Property } from 'apps/nestar-api/src/libs/dto/property/property';
+import { MemberStatus, MemberType } from 'apps/nestar-api/src/libs/enums/member.enum';
+import { PropertyStatus } from 'apps/nestar-api/src/libs/enums/property.enum';
 import { Model } from 'mongoose';
-import { Member } from '../../nestar-api/src/libs/dto/member/member';
-import { Property } from '../../nestar-api/src/libs/dto/property/property';
-import { PropertyStatus } from '../../nestar-api/src/libs/enums/property.enum';
-import { MemberStatus, MemberType } from '../../nestar-api/src/libs/enums/member.enum';
 
 @Injectable()
-export class NestarBatchService {
-	constructor(
+export class BatchService {
+	constructor(  // 2 ta schema moduleni Inject qildik, Inject qilishda @InjectModel yordamga keladi
 		@InjectModel('Property') private readonly propertyModel: Model<Property>,
 		@InjectModel('Member') private readonly memberModel: Model<Member>,
 	) {}
 
 	public async batchRollback(): Promise<void> {
-		await this.propertyModel.updateMany({ propertyStatus: PropertyStatus.ACTIVE }, { propertyRank: 0 }).exec();
-		await this.memberModel
+		await this.propertyModel
 			.updateMany(
+				// static method - aynan qaysi turdagi malumotlarni o'zgartiramiz
+				{
+					propertyStatus: PropertyStatus.ACTIVE,
+				},
+				{ propertyRank: 0 }, // aynan qaysi malumotga o'zgartirishimizni belgilab beradi
+			)
+			.exec();
+
+		await this.memberModel
+			.updateMany(  // aynan qaysi malumotlarni qo'lga olish kerakligi
 				{
 					memberStatus: MemberStatus.ACTIVE,
 					memberType: MemberType.AGENT,
@@ -28,34 +37,38 @@ export class NestarBatchService {
 
 	public async batchTopProperties(): Promise<void> {
 		const properties: Property[] = await this.propertyModel
-			.find({ propertyStatus: PropertyStatus.ACTIVE, propertyRank: 0 })
+			.find({
+				propertyStatus: PropertyStatus.ACTIVE,
+				propertyRank: 0,
+			})
 			.exec();
 
-		const promisedList = properties.map(async (property: Property) => {
-			const {_id, propertyViews = 1, propertyLikes = 1} = property;
-			const rank = propertyViews * 1 + propertyLikes * 2;
-			await this.propertyModel.findByIdAndUpdate(_id, { propertyRank: rank }).exec();
+		const promisedList = properties.map(async (ele: Property) => {  // array ustida iteration methodni qo'llab, har bitta elementni qo'lga olyabmiz
+			const { _id, propertyLikes, propertyViews } = ele;  // distraction qilyapmiz
+			const rank = propertyLikes * 2 + propertyViews * 1;  // qonuniyat yaratilmoqda
+			return await this.propertyModel.findByIdAndUpdate(_id, { propertyRank: rank });  // propertyRankni o'zgartiryapmiz
 		});
-
 		await Promise.all(promisedList);
-			
 	}
 
 	public async batchTopAgents(): Promise<void> {
 		const agents: Member[] = await this.memberModel
-			.find({ memberStatus: MemberStatus.ACTIVE, memberType: MemberType.AGENT, memberRank: 0 })
+			.find({
+				memberType: MemberType.AGENT,
+				propertyStatus: MemberStatus.ACTIVE,
+				propertyRank: 0, 
+			})
 			.exec();
 
-		const promisedList = agents.map(async (agent: Member) => {
-			const {_id, memberProperties = 1, memberViews = 1, memberLikes = 1, memberArticles = 1} = agent;
-			const rank = memberViews * 1 + memberLikes * 2 + memberArticles * 3 + memberProperties * 5;
-			await this.memberModel.findByIdAndUpdate(_id, { memberRank: rank }).exec();
+		const promisedList = agents.map(async (ele: Member) => {
+			const { _id, memberProperties, memberLikes, memberArticles, memberViews } = ele;
+			const rank = memberProperties * 5 + memberArticles * 3 + memberLikes * 2 + memberViews * 1;
+			return await this.propertyModel.findByIdAndUpdate(_id, { memberRank: rank });
 		});
-
-		await Promise.all(promisedList);
+		await Promise.all(promisedList);  // har birini to'liq ishga tushirib beradi
 	}
 
-	getHello(): string {
-		return 'Welcome to Nestar Batch Server!';
+	public getHello(): string {
+		return 'Welcome to Nestar BATCH Server!';
 	}
 }

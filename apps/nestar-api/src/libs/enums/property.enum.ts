@@ -10,6 +10,7 @@ registerEnumType(PropertyType, {
 });
 
 export enum PropertyStatus {
+	// HOLD = 'HOLD',  => kengayib ketishini oldini olish maqsadida HOLD dan voz kechamiz.
 	ACTIVE = 'ACTIVE',
 	SOLD = 'SOLD',
 	DELETE = 'DELETE',
@@ -19,7 +20,6 @@ registerEnumType(PropertyStatus, {
 });
 
 export enum PropertyLocation {
-	
 	SEOUL = 'SEOUL',
 	BUSAN = 'BUSAN',
 	INCHEON = 'INCHEON',

@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { InjectConnection, MongooseModule } from '@nestjs/mongoose';
-import { Connection, ConnectionStates } from 'mongoose';
-
+import { Connection } from 'mongoose';
 @Module({
 	imports: [
 		MongooseModule.forRootAsync({
@@ -12,14 +11,14 @@ import { Connection, ConnectionStates } from 'mongoose';
 	],
 	exports: [MongooseModule],
 })
-export class DatabaseModule {
+export class DatabaseModule {  // databasega ulanganligini print qilib beradigon mantiq
 	constructor(@InjectConnection() private readonly connection: Connection) {
-		if (connection.readyState === ConnectionStates.connected) {
+		if (connection.readyState === 1) {
 			console.log(
 				`MongoDB is connected into ${process.env.NODE_ENV === 'production' ? 'production' : 'development'} db`,
 			);
 		} else {
-			console.log('DB is not connected');
+			console.log('DB is not connected!');
 		}
 	}
 }

@@ -4,19 +4,19 @@ import { BoardArticleService } from './board-article.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import BoardArticleSchema from '../../schemas/BoardArticle.model';
 import { AuthModule } from '../auth/auth.module';
-import { MemberModule } from '../member/member.module';
 import { ViewModule } from '../view/view.module';
+import { MemberModule } from '../member/member.module';
 import { LikeModule } from '../like/like.module';
 
 @Module({
 	imports: [
 		MongooseModule.forFeature([{ name: 'BoardArticle', schema: BoardArticleSchema }]),
-		AuthModule,
-		MemberModule,
+		MemberModule, // memberservice dagi statistikasni update qilish mantig'ini ishlatamiz
+		AuthModule, // auth ichidagi decorate va guardslardan foydalana olamiz
 		ViewModule,
 		LikeModule,
 	],
 	providers: [BoardArticleResolver, BoardArticleService],
-	exports: [BoardArticleService],
+	exports: [BoardArticleService], // BoardArticleService tashqarida ishlatish un
 })
 export class BoardArticleModule {}
